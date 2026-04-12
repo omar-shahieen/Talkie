@@ -13,6 +13,9 @@ import { CacheInterceptor, CacheModule } from '@nestjs/cache-manager';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { RolesModule } from './roles/roles.module';
+import { ChannelsModule } from './channels/channels.module';
+import { ServersModule } from './servers/servers.module';
 
 @Module({
   imports: [
@@ -46,8 +49,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
         synchronize: config.get<string>('DB_SYNC') === 'true',
 
-        // optional but useful
-        logging: true,
+        logging: ['error'],
       }),
     }),
     AuditModule,
@@ -55,6 +57,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     AuthModule,
     AccessControlModule,
     LoggingModule,
+    RolesModule,
+    ChannelsModule,
+    ServersModule,
   ],
   controllers: [AppController],
   providers: [
