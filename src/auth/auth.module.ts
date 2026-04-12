@@ -18,10 +18,10 @@ import { AuthGuard } from './auth.guard';
   ],
   controllers: [AuthController],
   providers: [
-    {
-      provide: APP_GUARD,
-      useClass: AuthGuard,
-    },
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: AuthGuard,
+    // },
     AuthService,
   ],
   exports: [AuthService],

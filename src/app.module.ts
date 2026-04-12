@@ -8,6 +8,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { EventBusService } from './events/event-bus.service';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { AccessControlModule } from './access-control/access-control.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AuthModule } from './auth/auth.module';
     AuditModule,
     UsersModule,
     AuthModule,
+    AccessControlModule,
   ],
   controllers: [AppController],
   providers: [AppService, LoggerService, EventBusService],
