@@ -5,7 +5,7 @@ import 'winston-daily-rotate-file';
 type LogLevel = 'error' | 'warn' | 'info' | 'http' | 'debug';
 
 @Injectable()
-export class LoggerService implements NestLoggerService {
+export class LoggingService implements NestLoggerService {
   private readonly logger: winston.Logger;
 
   constructor() {

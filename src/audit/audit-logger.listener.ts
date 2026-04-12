@@ -1,12 +1,12 @@
 import { AuditService } from './audit.service';
-import { LoggerService } from '@nestjs/common';
 import { AppEvents } from '../events/events.enum';
 import { OnEvent } from '@nestjs/event-emitter';
+import { LoggingService } from '../logging/logging.service';
 
 export class AuditLoggerListener {
   constructor(
     private readonly auditService: AuditService,
-    private readonly logger: LoggerService,
+    private readonly logger: LoggingService,
   ) {}
 
   @OnEvent(Object.values(AppEvents))
