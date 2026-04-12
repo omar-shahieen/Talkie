@@ -11,6 +11,8 @@ import { AccessControlModule } from './access-control/access-control.module';
 import { LoggingModule } from './logging/logging.module';
 import { CacheInterceptor, CacheModule } from '@nestjs/cache-manager';
 import { APP_INTERCEPTOR } from '@nestjs/core';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
@@ -25,6 +27,28 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
     CacheModule.register({
       isGlobal: true,
       ttl: 5000, // in ms
+    }),
+    ConfigModule.forRoot({ isGlobal: true }),
+
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        host: config.get<string>('DB_HOST'),
+        port: config.get<number>('DB_PORT'),
+        username: config.get<string>('DB_USERNAME'),
+        password: config.get<string>('DB_PASSWORD'),
+        database: config.get<string>('DB_NAME'),
+
+        autoLoadEntities: true,
+        entities: ['modules/**/entity/*.js'],
+
+        synchronize: config.get<string>('DB_SYNC') === 'true',
+
+        // optional but useful
+        logging: true,
+      }),
     }),
     AuditModule,
     UsersModule,
