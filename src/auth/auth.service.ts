@@ -35,9 +35,11 @@ export class AuthService {
     const isMatch = await user.comparePassword(password);
     if (!isMatch) return null;
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _, ...result } = user; // strip password before returning
-    return result;
+    return {
+      id: user.id,
+      email: user.email,
+      isTfaEnabled: user.isTfaEnabled,
+    };
   }
 
   async signIn(user: { id: string; email: string }) {
@@ -263,5 +265,9 @@ export class AuthService {
 
     // TFA passed — issue real tokens
     return this.signIn(user);
+  }
+
+  async logout(userId: string): Promise<void> {
+    await this.usersService.update(userId, { currentJwtToken: '' });
   }
 }

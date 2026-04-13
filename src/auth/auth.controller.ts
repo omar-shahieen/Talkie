@@ -26,7 +26,7 @@ type AuthenticatedRequest = Request & {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @HttpCode(HttpStatus.OK)
   @Public()
@@ -82,7 +82,7 @@ export class AuthController {
   @Public()
   @UseGuards(AuthGuard('google'))
   @Get('google')
-  googleLogin() {}
+  googleLogin() { }
 
   @Public()
   @UseGuards(AuthGuard('google'))
@@ -91,6 +91,22 @@ export class AuthController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response, // ← passthrough so NestJS keeps control
   ) {
+    const oauthRedirectUrl =
+      process.env.FRONTEND_OAUTH_REDIRECT_URL ?? 'http://localhost:8080/oauth';
+
+    if (req.user.isTfaEnabled) {
+      const tfaLoginToken = await this.authService.createTfaLoginToken(
+        req.user,
+      );
+
+      res.redirect(
+        `${oauthRedirectUrl}?tfaRequired=1&tfaLoginToken=${encodeURIComponent(
+          tfaLoginToken,
+        )}`,
+      );
+      return;
+    }
+
     const { access_token, refresh_token } = await this.authService.signIn(
       req.user,
     );
@@ -102,9 +118,6 @@ export class AuthController {
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-
-    const oauthRedirectUrl =
-      process.env.FRONTEND_OAUTH_REDIRECT_URL ?? 'http://localhost:8080/oauth';
 
     res.redirect(
       `${oauthRedirectUrl}?token=${encodeURIComponent(access_token)}`,
@@ -191,5 +204,22 @@ export class AuthController {
     });
 
     return { access_token };
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  async logout(
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    await this.authService.logout(req.user.id);
+
+    res.clearCookie('jwt_refresh', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    });
+
+    return { message: 'Logged out' };
   }
 }
