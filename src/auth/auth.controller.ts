@@ -16,17 +16,26 @@ import { AuthService } from './auth.service';
 import { Cookies } from './decorators/cookie.decorator';
 import { Public } from './decorators/public.decorator';
 import { LocalAuthGuard } from './guards/auth-local.guard';
+import { SignInDto } from './dtos/SignInDto';
 import { SignUpDto } from './dtos/SignUpDto';
+
+type AuthenticatedRequest = Request & {
+  user: { id: string; email: string };
+};
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @HttpCode(HttpStatus.OK)
   @Public()
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  async signIn(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async signIn(
+    @Body() _signInDto: SignInDto,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const { access_token, refresh_token } = await this.authService.signIn(
       req.user, // "FIX"
     );
@@ -38,7 +47,7 @@ export class AuthController {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    return { access_token, refresh_token }; //  refresh token for mobile app support
+    return { access_token };
   }
 
   @Public()
@@ -57,24 +66,24 @@ export class AuthController {
   }
 
   @Get('profile')
-  getProfile(@Req() req: Request) {
-    return (req as any).user; //'FIX';
+  getProfile(@Req() req: AuthenticatedRequest) {
+    return req.user;
   }
 
   @Public()
   @UseGuards(AuthGuard('google'))
   @Get('google')
-  googleLogin() {}
+  googleLogin() { }
 
   @Public()
   @UseGuards(AuthGuard('google'))
   @Get('google/callback')
   async googleCallback(
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response, // ← passthrough so NestJS keeps control
   ) {
     const { access_token, refresh_token } = await this.authService.signIn(
-      (req as any).user, // "FIX"
+      req.user,
     );
 
     // Set refresh token in cookie same as local login
@@ -85,7 +94,11 @@ export class AuthController {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    // Redirect frontend — it reads access_token from query param and stores it
-    res.redirect(`http://localhost:8080/oauth?token=${access_token}`); // "REPLACE"
+    const oauthRedirectUrl =
+      process.env.FRONTEND_OAUTH_REDIRECT_URL ?? 'http://localhost:8080/oauth';
+
+    res.redirect(
+      `${oauthRedirectUrl}?token=${encodeURIComponent(access_token)}`,
+    );
   }
 }

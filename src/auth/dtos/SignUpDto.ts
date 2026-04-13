@@ -1,13 +1,22 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+
 export class SignUpDto {
-  id: string;
+  @IsString()
+  firstName!: string;
 
-  firstName: string;
+  @IsOptional()
+  @IsString()
+  lastName!: string;
 
-  lastName: string;
+  @IsEmail()
+  email!: string;
 
-  email: string;
+  @IsString()
+  @MinLength(3)
+  username!: string;
 
-  username: string;
-
-  password: string;
+  @IsString()
+  @MinLength(8)
+  password!: string;
 }

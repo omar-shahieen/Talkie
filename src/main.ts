@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { LoggingService } from './logging/logging.service';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
+import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   // replace winston logger with NestJS LoggerService
@@ -16,6 +17,13 @@ async function bootstrap() {
   );
   // cookie parser
   app.use(cookieParser());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
   await app.listen(process.env.PORT ?? 3000);
 
   logger.log(

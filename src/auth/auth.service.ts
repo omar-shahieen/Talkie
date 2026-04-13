@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
-import { JwtPayload } from './constants';
+import { jwtConstants, JwtPayload } from './constants';
 import { SignUpDto } from './dtos/SignUpDto';
 
 @Injectable()
@@ -10,7 +10,7 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   // Called by LocalStrategy
   async validateUser(email: string, password: string) {
@@ -29,13 +29,15 @@ export class AuthService {
     const payload = { sub: user.id, username: user.email };
 
     const refresh_token = await this.jwtService.signAsync(payload, {
-      expiresIn: '7d',
+      expiresIn: jwtConstants.refresh_expires_in,
     });
-    // STORE refresh token in the database
-    await this.usersService.update(user.id, { currentJwtToken: refresh_token });
+    const hashedRefreshToken = await bcrypt.hash(refresh_token, 10);
+    await this.usersService.update(user.id, {
+      currentJwtToken: hashedRefreshToken,
+    });
 
     const access_token = await this.jwtService.signAsync(payload, {
-      expiresIn: '15m',
+      expiresIn: jwtConstants.access_expires_in,
     });
     return { access_token, refresh_token };
   }
@@ -56,13 +58,21 @@ export class AuthService {
   async refreshToken(
     jwtRefreshToken: string,
   ): Promise<{ access_token: string }> {
-    // Verify refresh token
-    const decodedUser =
-      await this.jwtService.verifyAsync<JwtPayload>(jwtRefreshToken);
+    let decodedUser: JwtPayload;
 
-    // check the userToken against this refresh token
+    try {
+      decodedUser =
+        await this.jwtService.verifyAsync<JwtPayload>(jwtRefreshToken);
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
     const user = await this.usersService.findById(decodedUser.sub);
-    if (!user || user.currentJwtToken !== jwtRefreshToken) {
+    const isRefreshMatch = user?.currentJwtToken
+      ? await bcrypt.compare(jwtRefreshToken, user.currentJwtToken)
+      : false;
+
+    if (!user || !isRefreshMatch) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
@@ -72,7 +82,7 @@ export class AuthService {
         username: decodedUser.username,
       },
       {
-        expiresIn: '15m',
+        expiresIn: jwtConstants.access_expires_in,
       },
     );
 
@@ -86,15 +96,18 @@ export class AuthService {
     let user = await this.usersService.findByEmail(profile.email);
 
     if (!user) {
-      // New user via Google — no password needed
+      const baseUsername = profile.email.split('@')[0] || 'user';
+      const generatedUsername = `${baseUsername}_${profile.googleId.slice(0, 8)}`;
+
       user = await this.usersService.create({
         email: profile.email,
         firstName: profile.name,
+        lastName: '',
+        username: generatedUsername,
         googleId: profile.googleId,
-        // password: null, // OAuth users have no password
+        password: '',
       });
     } else if (!user.googleId) {
-      // Existing email/password user — link their Google account
       user = await this.usersService.update(user.id, {
         googleId: profile.googleId,
       });
