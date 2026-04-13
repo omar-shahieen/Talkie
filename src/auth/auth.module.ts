@@ -1,4 +1,3 @@
-import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtModule } from '@nestjs/jwt';
@@ -6,7 +5,9 @@ import { jwtConstants } from './constants';
 import { UsersModule } from '../users/users.module';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './auth.guard';
+import { Module, Global } from '@nestjs/common';
 
+@Global()
 @Module({
   imports: [
     UsersModule,
@@ -23,7 +24,8 @@ import { AuthGuard } from './auth.guard';
     //   useClass: AuthGuard,
     // },
     AuthService,
+    AuthGuard,
   ],
-  exports: [AuthService],
+  exports: [AuthGuard, AuthService],
 })
 export class AuthModule {}

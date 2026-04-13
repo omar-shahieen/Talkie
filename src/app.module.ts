@@ -16,24 +16,29 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RolesModule } from './roles/roles.module';
 import { ChannelsModule } from './channels/channels.module';
 import { ServersModule } from './servers/servers.module';
+import { MessagesModule } from './messages/messages.module';
 
 @Module({
   imports: [
     MongooseModule.forRoot(
+      // db for audit
       process.env.MONGO_URI ?? 'mongodb://localhost:27017/discord_demo',
     ),
     EventEmitterModule.forRoot({
+      // event emitter
       wildcard: true, // enables 'user.*' subscriptions
       delimiter: '.', // dot notation for namespacing
       maxListeners: 20,
     }),
     CacheModule.register({
+      // cache
       isGlobal: true,
       ttl: 5000, // in ms
     }),
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true }), // .env
 
     TypeOrmModule.forRootAsync({
+      // postgress
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -45,21 +50,25 @@ import { ServersModule } from './servers/servers.module';
         database: config.get<string>('DB_NAME'),
 
         autoLoadEntities: true,
-        entities: ['modules/**/entity/*.js'],
+        entities: [__dirname + '/**/entity/*{.js,.ts}'],
 
         synchronize: config.get<string>('DB_SYNC') === 'true',
 
-        logging: ['error'],
+        logging: true,
       }),
     }),
-    AuditModule,
-    UsersModule,
+    // GLOBAL MODULES
     AuthModule,
     AccessControlModule,
+    AuditModule,
     LoggingModule,
+
+    // APP_MODULES
+    UsersModule,
     RolesModule,
     ChannelsModule,
     ServersModule,
+    MessagesModule,
   ],
   controllers: [AppController],
   providers: [

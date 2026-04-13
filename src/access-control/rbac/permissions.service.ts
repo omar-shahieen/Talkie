@@ -1,60 +1,54 @@
 // src/permissions/permissions.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PermissionsBitfield } from './permissions.bitfield';
 import { Permission } from './permissions.constants';
-import {
-  servers,
-  roles,
-  channels,
-  channelOverwrites,
-  members,
-  ChannelOverwrite,
-} from './in-memory.store';
 
-export interface ResolutionTrace {
-  step: string;
-  bits: string;
-  grantedPermissions: string[];
-}
-
-export interface ResolutionResult {
-  userId: string;
-  serverId: string;
-  channelId: string;
-  allowed: boolean;
-  finalPermissions: string[];
-  trace: ResolutionTrace[];
-}
+import { InjectRepository } from '@nestjs/typeorm';
+import { ServerMember } from '../../users/entities/server-member.entity';
+import { Server } from '../../servers/entities/server.entity';
+import { Repository } from 'typeorm';
+import { ChannelOverwrite } from '../../channels/entities/channel-overwrite.entity';
 
 @Injectable()
 export class PermissionsService {
-  resolve(
+  constructor(
+    @InjectRepository(ChannelOverwrite)
+    private readonly channelOverwritesRepository: Repository<ChannelOverwrite>,
+    @InjectRepository(Server)
+    private readonly serverRepository: Repository<Server>,
+    @InjectRepository(ServerMember)
+    private readonly memberRepository: Repository<ServerMember>,
+  ) {}
+  async resolveForChannel(
     userId: string,
     serverId: string,
     channelId: string,
-  ): PermissionsBitfield {
+  ): Promise<PermissionsBitfield> {
+    console.log({
+      userId,
+      serverId,
+      channelId,
+    });
     // REPLACE WITH REAL DB CALLS
-    const server = servers.find((s) => s.id === serverId); // "DB_REPLACE"
-    if (!server) throw new NotFoundException();
-    const channel = channels.find((c) => c.id === channelId);
-    if (!channel) throw new NotFoundException();
-
-    const member = members.find(
-      (m) => m.userId === userId && m.serverId === serverId,
-    );
-    if (!member) throw new NotFoundException();
-
-    const memberRoles = roles.filter((r) => member?.roleIds.includes(r.id));
+    const server = await this.serverRepository.findOneByOrFail({
+      id: serverId,
+    });
 
     // Step 1 — owner bypass
     if (server.ownerId === userId) {
       return PermissionsBitfield.from(~0n);
     }
-
+    const member = await this.memberRepository.findOneOrFail({
+      where: {
+        serverId,
+        userId,
+      },
+      relations: ['roles'],
+    });
     // Step 2+3 — compute base permissions via bitwise OR of all roles
     let base = 0n;
-    for (const role of memberRoles) {
-      base |= role.permissions;
+    for (const role of member.roles) {
+      base |= BigInt(role.permissions);
     }
     let perms = PermissionsBitfield.from(base);
 
@@ -63,19 +57,21 @@ export class PermissionsService {
       return PermissionsBitfield.from(~0n);
     }
 
-    const overwrites = channelOverwrites.filter(
-      (o) => o.channelId === channelId,
-    );
+    const overwrites = await this.channelOverwritesRepository.find({
+      where: {
+        channelId,
+      },
+    });
 
     // Step 4 — @everyone channel overwrite
-    const everyoneRole = memberRoles.find((r) => r.isEveryone);
+    const everyoneRole = member.roles.find((r) => r.isEveryone);
 
     if (everyoneRole) {
       perms = this.applyOverwrite(perms, overwrites, everyoneRole.id, 'role');
     }
 
     // Step 5 — role overwrites (sorted by position ascending)
-    const sortedRoles = [...memberRoles]
+    const sortedRoles = [...member.roles]
       .filter((r) => !r.isEveryone)
       .sort((a, b) => a.position - b.position);
 
@@ -100,8 +96,8 @@ export class PermissionsService {
     );
     if (!overwrite) return perms;
 
-    const allow = overwrite.allow;
-    const deny = overwrite.deny;
+    const allow = BigInt(overwrite.allow);
+    const deny = BigInt(overwrite.deny);
 
     return perms.remove(deny).add(allow);
   }

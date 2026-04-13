@@ -5,7 +5,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Channel } from './channel.entity';
+import { Channel } from '../../channels/entities/channel.entity';
 
 @Entity('messages')
 export class Message {
