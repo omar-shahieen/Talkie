@@ -1,7 +1,14 @@
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { PERMISSION_KEY } from './require-permission.decorator';
 import { PermissionsService } from './permissions.service';
+import { Request } from 'express';
 
 @Injectable()
 export class PermissionGuard implements CanActivate {
@@ -10,36 +17,69 @@ export class PermissionGuard implements CanActivate {
     private readonly permissionsService: PermissionsService,
   ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredPermissions = this.reflector.getAllAndOverride<bigint[]>(
       PERMISSION_KEY,
       [context.getHandler(), context.getClass()],
     );
 
     if (!requiredPermissions?.length) {
-      return true; // No permissions required, allow access
+      return true;
     }
 
-    const request: Request & Record<string, any> = context
-      .switchToHttp()
-      .getRequest();
+    const { userId, serverId, channelId } = this.extractContext(context);
+    if (!userId || !channelId) {
+      throw new UnauthorizedException();
+    }
+
+    const perms = await this.permissionsService.resolve(
+      userId,
+      serverId,
+      channelId,
+    );
+    if (!perms.hasAll(...requiredPermissions)) {
+      throw new ForbiddenException();
+    }
+
     return true;
-    // const { userId, serverId, channelId } = this.extractContext(request);
-    //
-    // const perms = this.permissionsService.resolveForChannel(
-    //   userId,
-    //   serverId,
-    //   channelId,
-    // );
-    //
-    // return perms.hasAll(...requiredPermissions);
   }
 
-  // private extractContext(request: Request & Record<string, unknown>) {
-  //   return {
-  //     userId: request.user.id,
-  //     serverId: request.params.serverId ?? request.body.serverId,
-  //     channelId: request.params.channelId ?? request.body.channelId,
-  //   };
-  // }
+  private extractContext(context: ExecutionContext): {
+    userId?: string;
+    serverId?: string;
+    channelId?: string;
+  } {
+    if (context.getType<'http' | 'ws'>() === 'http') {
+      const request = context.switchToHttp().getRequest<Request & Record<string, any>>();
+      return {
+        userId: request.user ? String(request.user.sub) : undefined,
+        serverId: this.pickString(request.params.serverId ?? request.body.serverId),
+        channelId: this.pickString(request.params.channelId ?? request.body.channelId),
+      };
+    }
+
+    const client = context.switchToWs().getClient<{
+      data?: Record<string, any>;
+    }>();
+    const payload = context.switchToWs().getData<Record<string, any>>() ?? {};
+    const socketUser = client.data?.user;
+
+    return {
+      userId: socketUser ? String(socketUser.sub) : undefined,
+      serverId: payload.serverId,
+      channelId: payload.channelId,
+    };
+  }
+
+  private pickString(value: unknown): string | undefined {
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    if (Array.isArray(value) && typeof value[0] === 'string') {
+      return value[0];
+    }
+
+    return undefined;
+  }
 }

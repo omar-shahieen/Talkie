@@ -4,7 +4,7 @@ import { AppService } from './app.service';
 import { AuditModule } from './audit/audit.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { EventBusService } from './events/event-bus.service';
+import { EventsModule } from './events/events.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { AccessControlModule } from './access-control/access-control.module';
@@ -16,6 +16,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RolesModule } from './roles/roles.module';
 import { ChannelsModule } from './channels/channels.module';
 import { ServersModule } from './servers/servers.module';
+import { RealtimeModule } from './realtime/realtime.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ServersModule } from './servers/servers.module';
       process.env.MONGO_URI ?? 'mongodb://localhost:27017/discord_demo',
     ),
     EventEmitterModule.forRoot({
+      global: true,
       wildcard: true, // enables 'user.*' subscriptions
       delimiter: '.', // dot notation for namespacing
       maxListeners: 20,
@@ -32,22 +34,23 @@ import { ServersModule } from './servers/servers.module';
       ttl: 5000, // in ms
     }),
     ConfigModule.forRoot({ isGlobal: true }),
+    EventsModule,
 
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
-        host: config.get<string>('DB_HOST'),
-        port: config.get<number>('DB_PORT'),
-        username: config.get<string>('DB_USERNAME'),
-        password: config.get<string>('DB_PASSWORD'),
-        database: config.get<string>('DB_NAME'),
+        host: config.get<string>('DB_HOST') ?? 'localhost',
+        port: Number(config.get<string>('DB_PORT') ?? 5432),
+        username: config.get<string>('DB_USERNAME') ?? 'postgres',
+        password: config.get<string>('DB_PASSWORD') ?? 'postgres',
+        database: config.get<string>('DB_NAME') ?? 'DISCORD',
 
         autoLoadEntities: true,
         entities: ['modules/**/entity/*.js'],
 
-        synchronize: config.get<string>('DB_SYNC') === 'true',
+        synchronize: (config.get<string>('DB_SYNC') ?? 'true') === 'true',
 
         logging: ['error'],
       }),
@@ -60,11 +63,11 @@ import { ServersModule } from './servers/servers.module';
     RolesModule,
     ChannelsModule,
     ServersModule,
+    RealtimeModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    EventBusService,
     {
       provide: APP_INTERCEPTOR,
       useClass: CacheInterceptor,

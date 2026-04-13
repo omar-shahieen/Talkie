@@ -6,7 +6,7 @@ export class AccessControlController {
   constructor(private readonly permissionsService: PermissionsService) {}
 
   @Get('resolve')
-  resolve(
+  async resolve(
     @Query('userId') userId: string,
     @Query('serverId') serverId: string = 'server-1',
     @Query('channelId') channelId: string,
