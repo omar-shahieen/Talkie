@@ -1,7 +1,7 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Role } from '../../roles/entities/role.entity';
 import { Channel } from '../../channels/entities/channel.entity';
-import { ServerMember } from '../../users/entities/server-members.entity';
+import { ServerMember } from '../../users/entities/server-member.entity';
 
 @Entity('servers')
 export class Server {

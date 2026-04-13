@@ -1,5 +1,7 @@
 export const jwtConstants = {
-  secret: 'ENV_SECRET',
+  secret: process.env.JWT_SECRET ?? 'dev-secret',
+  access_expires_in: '15m' as const,
+  refresh_expires_in: '7d' as const,
 };
 
-export type JwtPayload = { sub: number; username: string };
+export type JwtPayload = { sub: string; username: string };

@@ -17,10 +17,12 @@ import { RolesModule } from './roles/roles.module';
 import { ChannelsModule } from './channels/channels.module';
 import { ServersModule } from './servers/servers.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { MessagesModule } from './messages/messages.module';
 
 @Module({
   imports: [
     MongooseModule.forRoot(
+      // db for audit
       process.env.MONGO_URI ?? 'mongodb://localhost:27017/discord_demo',
     ),
     EventEmitterModule.forRoot({
@@ -30,13 +32,17 @@ import { RealtimeModule } from './realtime/realtime.module';
       maxListeners: 20,
     }),
     CacheModule.register({
+      // cache
       isGlobal: true,
       ttl: 5000, // in ms
     }),
     ConfigModule.forRoot({ isGlobal: true }),
     EventsModule,
+      ConfigModule.forRoot({ isGlobal: true }),
+      EventsModule,
 
     TypeOrmModule.forRootAsync({
+      // postgress
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -48,22 +54,26 @@ import { RealtimeModule } from './realtime/realtime.module';
         database: config.get<string>('DB_NAME') ?? 'DISCORD',
 
         autoLoadEntities: true,
-        entities: ['modules/**/entity/*.js'],
-
+        entities: [__dirname + '/**/entity/*{.js,.ts}'],
+        subscribers: [__dirname + '/**/*.subscriber{.ts,.js}'],
         synchronize: (config.get<string>('DB_SYNC') ?? 'true') === 'true',
 
-        logging: ['error'],
+        logging: true,
       }),
     }),
-    AuditModule,
-    UsersModule,
+    // GLOBAL MODULES
     AuthModule,
     AccessControlModule,
+    AuditModule,
     LoggingModule,
+
+    // APP_MODULES
+    UsersModule,
     RolesModule,
     ChannelsModule,
     ServersModule,
     RealtimeModule,
+    MessagesModule,
   ],
   controllers: [AppController],
   providers: [

@@ -11,7 +11,7 @@ import { PermissionsService } from './permissions.service';
 import { Request } from 'express';
 
 @Injectable()
-export class PermissionGuard implements CanActivate {
+export class PermissionsGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private readonly permissionsService: PermissionsService,
@@ -32,11 +32,12 @@ export class PermissionGuard implements CanActivate {
       throw new UnauthorizedException();
     }
 
-    const perms = await this.permissionsService.resolve(
+    const perms = await this.permissionsService.resolveForChannel(
       userId,
       serverId,
       channelId,
     );
+
     if (!perms.hasAll(...requiredPermissions)) {
       throw new ForbiddenException();
     }
@@ -50,11 +51,17 @@ export class PermissionGuard implements CanActivate {
     channelId?: string;
   } {
     if (context.getType<'http' | 'ws'>() === 'http') {
-      const request = context.switchToHttp().getRequest<Request & Record<string, any>>();
+      const request = context
+        .switchToHttp()
+        .getRequest<Request & Record<string, any>>();
+      const user = request.user as Record<string, unknown> | undefined;
+
       return {
-        userId: request.user ? String(request.user.sub) : undefined,
+        userId: user ? String(user.sub ?? user.id) : undefined,
         serverId: this.pickString(request.params.serverId ?? request.body.serverId),
-        channelId: this.pickString(request.params.channelId ?? request.body.channelId),
+        channelId: this.pickString(
+          request.params.channelId ?? request.body.channelId,
+        ),
       };
     }
 
@@ -65,9 +72,9 @@ export class PermissionGuard implements CanActivate {
     const socketUser = client.data?.user;
 
     return {
-      userId: socketUser ? String(socketUser.sub) : undefined,
-      serverId: payload.serverId,
-      channelId: payload.channelId,
+      userId: socketUser ? String(socketUser.sub ?? socketUser.id) : undefined,
+      serverId: this.pickString(payload.serverId),
+      channelId: this.pickString(payload.channelId),
     };
   }
 
@@ -83,3 +90,5 @@ export class PermissionGuard implements CanActivate {
     return undefined;
   }
 }
+
+export { PermissionsGuard as PermissionGuard };

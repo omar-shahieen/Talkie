@@ -8,9 +8,13 @@ export class AccessControlController {
   @Get('resolve')
   async resolve(
     @Query('userId') userId: string,
-    @Query('serverId') serverId: string = 'server-1',
+    @Query('serverId') serverId: string,
     @Query('channelId') channelId: string,
   ) {
-    return this.permissionsService.resolve(userId, serverId, channelId);
+    return this.permissionsService.resolveForChannel(
+      userId,
+      serverId,
+      channelId,
+    );
   }
 }
