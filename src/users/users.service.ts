@@ -19,7 +19,10 @@ export class UsersService {
     const newUser = this.usersRepository.create(user);
     return this.usersRepository.save(newUser);
   }
-  async update(id: string, updateUserDto: Partial<User>): Promise<User> {
+  async update(
+    id: string,
+    updateUserDto: Partial<User> | undefined,
+  ): Promise<User> {
     // 1. Check if the user exists
     const user = await this.usersRepository.preload({
       id: id,
