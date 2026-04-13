@@ -51,7 +51,7 @@ import { MessagesModule } from './messages/messages.module';
 
         autoLoadEntities: true,
         entities: [__dirname + '/**/entity/*{.js,.ts}'],
-
+        subscribers: [__dirname + '/**/*.subscriber{.ts,.js}'],
         synchronize: config.get<string>('DB_SYNC') === 'true',
 
         logging: true,

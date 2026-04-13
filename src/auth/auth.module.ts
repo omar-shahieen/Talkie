@@ -4,8 +4,10 @@ import { JwtModule } from '@nestjs/jwt';
 import { jwtConstants } from './constants';
 import { UsersModule } from '../users/users.module';
 import { APP_GUARD } from '@nestjs/core';
-import { AuthGuard } from './auth.guard';
+import { AuthJwtGuard } from './guards/auth-jwt.guard';
 import { Module, Global } from '@nestjs/common';
+import { JwtStrategy } from './strategies/jwt.strategy';
+import { LocalStrategy } from './strategies/local.strategy';
 
 @Global()
 @Module({
@@ -14,18 +16,21 @@ import { Module, Global } from '@nestjs/common';
     JwtModule.register({
       global: true,
       secret: jwtConstants.secret,
-      signOptions: { expiresIn: '15min' },
+      signOptions: { expiresIn: '60s' }, //default
     }),
   ],
   controllers: [AuthController],
   providers: [
-    // {
-    //   provide: APP_GUARD,
-    //   useClass: AuthGuard,
-    // },
+    {
+      provide: APP_GUARD,
+      useClass: AuthJwtGuard,
+    },
     AuthService,
-    AuthGuard,
+    AuthJwtGuard,
+    LocalStrategy,
+    JwtStrategy,
+    // GoogleStrategy,
   ],
-  exports: [AuthGuard, AuthService],
+  exports: [AuthJwtGuard, AuthService],
 })
 export class AuthModule {}
