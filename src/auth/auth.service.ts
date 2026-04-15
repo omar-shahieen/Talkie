@@ -11,10 +11,10 @@ import { UsersService } from '../users/users.service';
 import { jwtConstants, JwtPayload } from './constants';
 import { SignUpDto } from './dtos/SignUpDto';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from '../users/entities/user.entity';
-import authenticator from 'otplib';
+import * as authenticator from 'otplib';
+import { LoggingService } from '../logging/logging.service';
+import { EventBusService } from '../events/event-bus.service';
+import { AppEvents } from '../events/events.enum';
 
 @Injectable()
 export class AuthService {
@@ -22,14 +22,22 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private readonly logger: LoggingService,
+    private readonly eventBus: EventBusService,
+  ) {}
 
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-  ) { }
+  private redactEmail(email: string): string {
+    const [name, domain] = email.split('@');
+    if (!name || !domain) return 'unknown';
+    const maskedName =
+      name.length <= 2 ? `${name[0] ?? '*'}*` : `${name.slice(0, 2)}***`;
+    return `${maskedName}@${domain}`;
+  }
 
   // Called by LocalStrategy
   async validateUser(email: string, password: string) {
-    const user = await this.usersService.findByEmail(email);
+    const user = await this.usersService.findByEmailWithPassword(email);
+
     if (!user) return null;
 
     const isMatch = await user.comparePassword(password);
@@ -56,6 +64,17 @@ export class AuthService {
     const access_token = await this.jwtService.signAsync(payload, {
       expiresIn: jwtConstants.access_expires_in,
     });
+
+    this.logger.log(
+      `Auth login succeeded for userId=${user.id}`,
+      AuthService.name,
+    );
+    this.eventBus.emit(AppEvents.USER_LOGIN, {
+      userId: user.id,
+      email: this.redactEmail(user.email),
+      method: 'password-or-oauth',
+    });
+
     return { access_token, refresh_token };
   }
 
@@ -77,11 +96,15 @@ export class AuthService {
     try {
       decodedUser = await this.jwtService.verifyAsync<JwtPayload>(token);
     } catch {
-      throw new UnauthorizedException('Invalid TFA login token');
+      throw new UnauthorizedException(
+        'Invalid or expired TFA login token. Please sign in again.',
+      );
     }
 
     if (!decodedUser.tfa) {
-      throw new UnauthorizedException('Invalid TFA login token');
+      throw new UnauthorizedException(
+        'Invalid TFA login token payload. Please sign in again.',
+      );
     }
 
     return { id: decodedUser.sub, email: decodedUser.username };
@@ -89,13 +112,25 @@ export class AuthService {
   async signUp(user: SignUpDto) {
     const { firstName, lastName, email, password, username } = user;
 
-    return await this.usersService.create({
+    const createdUser = await this.usersService.create({
       firstName,
       lastName,
       email,
       password,
       username,
     });
+
+    this.logger.log(
+      `Auth signup succeeded for userId=${createdUser.id}`,
+      AuthService.name,
+    );
+    this.eventBus.emit(AppEvents.USER_SIGNUP, {
+      userId: createdUser.id,
+      email: this.redactEmail(email),
+      username,
+    });
+
+    return createdUser;
   }
 
   async refreshToken(
@@ -107,16 +142,34 @@ export class AuthService {
       decodedUser =
         await this.jwtService.verifyAsync<JwtPayload>(jwtRefreshToken);
     } catch {
-      throw new UnauthorizedException('Invalid refresh token');
+      this.logger.warn(
+        'Refresh token verification failed: invalid signature',
+        AuthService.name,
+      );
+      throw new UnauthorizedException(
+        'Refresh token is invalid or expired. Please sign in again.',
+      );
     }
 
-    const user = await this.usersService.findById(decodedUser.sub);
+    const user = await this.usersService.findByIdWithRefreshToken(
+      decodedUser.sub,
+    );
     const isRefreshMatch = user?.currentJwtToken
-      ? await bcrypt.compare(jwtRefreshToken, user.currentJwtToken)
+      ? await user.compareToken(jwtRefreshToken)
       : false;
 
     if (!user || !isRefreshMatch) {
-      throw new UnauthorizedException('Invalid refresh token');
+      this.logger.warn(
+        `Refresh token rejected for userId=${decodedUser.sub}`,
+        AuthService.name,
+      );
+      this.eventBus.emit(AppEvents.USER_LOGIN_FAILED, {
+        userId: decodedUser.sub,
+        reason: 'refresh-token-mismatch',
+      });
+      throw new UnauthorizedException(
+        'Refresh token does not match active session. Please sign in again.',
+      );
     }
 
     const newAccessToken = await this.jwtService.signAsync(
@@ -129,6 +182,11 @@ export class AuthService {
       },
     );
 
+    this.logger.log(
+      `Access token refreshed for userId=${decodedUser.sub}`,
+      AuthService.name,
+    );
+
     return { access_token: newAccessToken };
   }
   async findOrCreateGoogleUser(profile: {
@@ -136,7 +194,7 @@ export class AuthService {
     email: string;
     name: string;
   }) {
-    let user = await this.usersService.findByEmail(profile.email);
+    let user = await this.usersService.findByEmailWithSecrets(profile.email);
 
     if (!user) {
       const baseUsername = profile.email.split('@')[0] || 'user';
@@ -174,8 +232,8 @@ export class AuthService {
 
   // Saves the secret temporarily — user must confirm with a token before it's "live"
   async initiateTfaEnabling(email: string): Promise<{ uri: string }> {
-    const user = await this.usersService.findByEmail(email);
-    if (!user) throw new NotFoundException('User not found');
+    const user = await this.usersService.findByEmailWithSecrets(email);
+    if (!user) throw new NotFoundException('User was not found for TFA setup');
 
     const { uri, secret } = this.generateSecret(email);
 
@@ -193,7 +251,20 @@ export class AuthService {
     token: string;
     secret: string;
   }): Promise<boolean> {
-    return authenticator.verify({ token, secret });
+    if (!token || !secret) {
+      return false;
+    }
+
+    try {
+      const res = await authenticator.verify({ token, secret });
+      return res.valid;
+    } catch (error) {
+      // If the secret is malformed (not base32), otplib may throw.
+      this.logger.logError('TFA verification execution failed', error, {
+        context: AuthService.name,
+      });
+      return false;
+    }
   }
 
   async enableTfaForUser({
@@ -203,25 +274,38 @@ export class AuthService {
     email: string;
     tfaToken: string;
   }): Promise<void> {
-    const user = await this.usersService.findByEmail(email);
-    if (!user) throw new NotFoundException('User not found');
+    const user = await this.usersService.findByEmailWithSecrets(email);
+    if (!user) throw new NotFoundException('User was not found for TFA enable');
 
     if (user.isTfaEnabled) {
-      throw new BadRequestException('TFA is already enabled');
+      throw new BadRequestException('TFA is already enabled for this account');
     }
 
     // Secret must have been saved via initiateTfaEnabling first
     if (!user.tfaSecret) {
-      throw new ForbiddenException('Initiate TFA setup first');
+      throw new ForbiddenException(
+        'TFA setup has not been initiated. Call /auth/tfa/initiate first.',
+      );
     }
 
     if (
       !(await this.verifyToken({ token: tfaToken, secret: user.tfaSecret }))
     ) {
-      throw new UnauthorizedException('Invalid TFA token');
+      this.eventBus.emit(AppEvents.USER_TFA_FAILED, {
+        userId: user.id,
+        reason: 'enable-invalid-token',
+      });
+      throw new UnauthorizedException(
+        'Invalid TFA code. Use a fresh code from your authenticator app.',
+      );
     }
 
-    await this.userRepository.update({ id: user.id }, { isTfaEnabled: true });
+    await this.usersService.update(user.id, { isTfaEnabled: true });
+    this.logger.log(`TFA enabled for userId=${user.id}`, AuthService.name);
+    this.eventBus.emit(AppEvents.USER_TFA_ENABLED, {
+      userId: user.id,
+      email: this.redactEmail(email),
+    });
   }
 
   async disableTfaForUser({
@@ -231,36 +315,60 @@ export class AuthService {
     email: string;
     tfaToken: string;
   }): Promise<void> {
-    const user = await this.usersService.findByEmail(email);
-    if (!user) throw new NotFoundException('User not found');
+    const user = await this.usersService.findByEmailWithSecrets(email);
+    if (!user)
+      throw new NotFoundException('User was not found for TFA disable request');
 
     if (!user.isTfaEnabled || !user.tfaSecret) {
-      throw new ForbiddenException('TFA is not enabled');
+      throw new ForbiddenException('TFA is not enabled for this account');
     }
 
     if (
       !(await this.verifyToken({ token: tfaToken, secret: user.tfaSecret }))
     ) {
-      throw new UnauthorizedException('Invalid TFA token');
+      this.eventBus.emit(AppEvents.USER_TFA_FAILED, {
+        userId: user.id,
+        reason: 'disable-invalid-token',
+      });
+      throw new UnauthorizedException(
+        'Invalid TFA code. Use a fresh code from your authenticator app.',
+      );
     }
 
-    await this.userRepository.update(
-      { id: user.id },
-      { isTfaEnabled: false, tfaSecret: '' },
-    );
+    await this.usersService.update(user.id, {
+      isTfaEnabled: false,
+      tfaSecret: '',
+    });
+    this.logger.log(`TFA disabled for userId=${user.id}`, AuthService.name);
+    this.eventBus.emit(AppEvents.USER_TFA_DISABLED, {
+      userId: user.id,
+      email: this.redactEmail(email),
+    });
   }
 
   // Called during login when isTfaEnabled = true
   async signInWithTfa(user: { id: string; email: string }, tfaToken: string) {
-    const fullUser = await this.usersService.findById(user.id);
+    const fullUser = await this.usersService.findByIdWithTfaSecret(user.id);
+
+    if (!fullUser?.tfaSecret) {
+      throw new UnauthorizedException(
+        'TFA is not configured for this account. Contact support if this is unexpected.',
+      );
+    }
     if (!fullUser?.isTfaEnabled || !fullUser.tfaSecret) {
-      throw new UnauthorizedException('TFA not configured');
+      throw new UnauthorizedException('TFA is not enabled for this account');
     }
 
     if (
       !(await this.verifyToken({ token: tfaToken, secret: fullUser.tfaSecret }))
     ) {
-      throw new UnauthorizedException('Invalid TFA token');
+      this.eventBus.emit(AppEvents.USER_TFA_FAILED, {
+        userId: user.id,
+        reason: 'signin-invalid-token',
+      });
+      throw new UnauthorizedException(
+        'Invalid TFA code. Use a fresh code from your authenticator app.',
+      );
     }
 
     // TFA passed — issue real tokens
@@ -269,5 +377,7 @@ export class AuthService {
 
   async logout(userId: string): Promise<void> {
     await this.usersService.update(userId, { currentJwtToken: '' });
+    this.logger.log(`User logged out userId=${userId}`, AuthService.name);
+    this.eventBus.emit(AppEvents.USER_LOGOUT, { userId });
   }
 }

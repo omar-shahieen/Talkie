@@ -10,13 +10,11 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from '../users/entities/user.entity';
+import { AuthGoogleGuard } from './guards/auth-google.guard';
 
 @Global()
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
     UsersModule,
     ConfigModule,
     JwtModule.registerAsync({
@@ -44,6 +42,7 @@ import { User } from '../users/entities/user.entity';
     },
     AuthService,
     AuthJwtGuard,
+    AuthGoogleGuard,
     LocalStrategy,
     JwtStrategy,
     GoogleStrategy,

@@ -1,7 +1,15 @@
 import { Reflector } from '@nestjs/core';
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { PERMISSION_KEY } from './require-permission.decorator';
 import { PermissionsService } from './permissions.service';
+import { LoggingService } from '../../logging/logging.service';
+import { EventBusService } from '../../events/event-bus.service';
+import { AppEvents } from '../../events/events.enum';
 
 import { Request } from 'express';
 
@@ -26,6 +34,8 @@ export class PermissionsGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private readonly permissionsService: PermissionsService,
+    private readonly logger: LoggingService,
+    private readonly eventBus: EventBusService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -40,18 +50,41 @@ export class PermissionsGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const { userId, serverId, channelId } = this.extractContext(request);
-    // 3. Ensure these variables exist (Basic Runtime Safety)
+
     if (!userId || !serverId || !channelId) {
-      return false;
+      throw new ForbiddenException(
+        'Permission context is incomplete: userId, serverId and channelId are required.',
+      );
     }
+
     const perms = await this.permissionsService.resolveForChannel(
       userId,
       serverId,
       channelId,
     );
-    console.log(perms);
-    console.log(requiredPermissions);
-    return perms.hasAll(...requiredPermissions);
+    const isAllowed = perms.hasAll(...requiredPermissions);
+
+    if (!isAllowed) {
+      const payload = {
+        userId,
+        serverId,
+        channelId,
+        requiredPermissions: requiredPermissions.map((perm) => perm.toString()),
+        effectivePermissions: perms.toJSON(),
+      };
+
+      this.logger.warn(
+        `Permission denied for userId=${userId} serverId=${serverId} channelId=${channelId}`,
+        PermissionsGuard.name,
+      );
+      this.eventBus.emit(AppEvents.PERMISSION_DENIED, payload);
+
+      throw new ForbiddenException(
+        'You do not have the required permissions for this channel action.',
+      );
+    }
+
+    return true;
   }
 
   private extractContext(request: AuthenticatedRequest) {

@@ -8,6 +8,7 @@ import { ServerMember } from '../users/entities/server-member.entity';
 import { Channel } from '../channels/entities/channel.entity';
 import { ChannelOverwrite } from '../channels/entities/channel-overwrite.entity';
 import { Message } from '../messages/entities/message.entity';
+import { UserSubscriber } from '../users/user.subscriber';
 
 // ---------------------------------------------------
 // Standalone DataSource — no NestJS/AppModule needed
@@ -28,8 +29,9 @@ const AppDataSource = new DataSource({
     ChannelOverwrite,
     Message,
   ],
-  synchronize: true, // Never true in production
-  dropSchema: true, // CAUTION: This drops the schema every time the connection is established
+  subscribers: [UserSubscriber], // 👈 this is what was missing
+  synchronize: true,
+  dropSchema: true,
   logging: false,
 });
 
@@ -57,7 +59,7 @@ async function seed() {
         lastName: faker.person.lastName(),
         email: faker.internet.email(),
         username: faker.internet.username(),
-        password: faker.internet.password(),
+        password: 'password123',
         isActive: true,
       }),
     ),

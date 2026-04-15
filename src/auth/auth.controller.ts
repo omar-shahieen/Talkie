@@ -10,7 +10,6 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport'; // ← import this
 import type { Response, Request } from 'express';
 import { AuthService } from './auth.service';
 import { Cookies } from './decorators/cookie.decorator';
@@ -19,6 +18,7 @@ import { LocalAuthGuard } from './guards/auth-local.guard';
 import { SignInDto } from './dtos/SignInDto';
 import { SignUpDto } from './dtos/SignUpDto';
 import { VerifyTfaDto } from './dtos/tfa.dto';
+import { AuthGoogleGuard } from './guards/auth-google.guard';
 
 type AuthenticatedRequest = Request & {
   user: { id: string; email: string; isTfaEnabled?: boolean };
@@ -26,7 +26,7 @@ type AuthenticatedRequest = Request & {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   @HttpCode(HttpStatus.OK)
   @Public()
@@ -49,12 +49,7 @@ export class AuthController {
       req.user,
     );
 
-    res.cookie('jwt_refresh', refresh_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    this.setRefreshCookie(res, refresh_token);
 
     return { access_token };
   }
@@ -80,12 +75,12 @@ export class AuthController {
   }
 
   @Public()
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(AuthGoogleGuard)
   @Get('google')
-  googleLogin() { }
+  googleLogin() {}
 
   @Public()
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(AuthGoogleGuard)
   @Get('google/callback')
   async googleCallback(
     @Req() req: AuthenticatedRequest,
@@ -112,12 +107,7 @@ export class AuthController {
     );
 
     // Set refresh token in cookie same as local login
-    res.cookie('jwt_refresh', refresh_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    this.setRefreshCookie(res, refresh_token);
 
     res.redirect(
       `${oauthRedirectUrl}?token=${encodeURIComponent(access_token)}`,
@@ -183,7 +173,7 @@ export class AuthController {
   ) {
     const authHeader = req.headers.authorization;
     const tfaLoginToken = authHeader?.startsWith('Bearer ')
-      ? authHeader.slice('Bearer '.length)
+      ? authHeader.split(' ')[1]
       : '';
 
     if (!tfaLoginToken) {
@@ -191,17 +181,11 @@ export class AuthController {
     }
 
     const user = await this.authService.validateTfaLoginToken(tfaLoginToken);
-    const { access_token, refresh_token } = await this.authService.signInWithTfa(
-      user,
-      body.tfaToken,
-    );
 
-    res.cookie('jwt_refresh', refresh_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    const { access_token, refresh_token } =
+      await this.authService.signInWithTfa(user, body.tfaToken);
+
+    this.setRefreshCookie(res, refresh_token);
 
     return { access_token };
   }
@@ -221,5 +205,14 @@ export class AuthController {
     });
 
     return { message: 'Logged out' };
+  }
+
+  private setRefreshCookie(res: Response, refreshToken: string) {
+    res.cookie('jwt_refresh', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
   }
 }

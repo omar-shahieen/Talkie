@@ -2,7 +2,12 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
-import { CreateUserDto } from './dtos/createUser.dto';
+
+type UserHiddenField =
+  | 'password'
+  | 'currentJwtToken'
+  | 'tfaSecret'
+  | 'googleId';
 
 @Injectable()
 export class UsersService {
@@ -40,8 +45,44 @@ export class UsersService {
   async findById(id: string): Promise<User | null> {
     return this.usersRepository.findOneBy({ id });
   }
-  async findByEmail(email: string): Promise<User | null> {
-    return this.usersRepository.findOneBy({ email });
+
+  private createQueryWithHiddenFields(hiddenFields: UserHiddenField[]) {
+    const query = this.usersRepository.createQueryBuilder('user');
+
+    for (const field of hiddenFields) {
+      query.addSelect(`user.${field}`);
+    }
+
+    return query;
+  }
+
+  async findByEmailWithPassword(email: string): Promise<User | null> {
+    return this.createQueryWithHiddenFields(['password'])
+      .where('user.email = :email', { email })
+      .getOne();
+  }
+
+  async findByIdWithRefreshToken(id: string): Promise<User | null> {
+    return this.createQueryWithHiddenFields(['currentJwtToken'])
+      .where('user.id = :id', { id })
+      .getOne();
+  }
+
+  async findByIdWithTfaSecret(id: string): Promise<User | null> {
+    return this.createQueryWithHiddenFields(['tfaSecret'])
+      .where('user.id = :id', { id })
+      .getOne();
+  }
+
+  async findByEmailWithSecrets(email: string): Promise<User | null> {
+    return this.createQueryWithHiddenFields([
+      'password',
+      'currentJwtToken',
+      'tfaSecret',
+      'googleId',
+    ])
+      .where('user.email = :email', { email })
+      .getOne();
   }
 
   async findJwtToken(jwtToken: string) {

@@ -3,8 +3,20 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
+import { LoggingService } from '../logging/logging.service';
+import { AuditService } from '../audit/audit.service';
+
+jest.mock('otplib', () => ({
+  __esModule: true,
+  default: {
+    generateSecret: jest.fn(() => 'mock-secret'),
+    generateURI: jest.fn(() => 'mock-uri'),
+    verify: jest.fn(() => true),
+  },
+}));
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -14,6 +26,10 @@ describe('AuthService', () => {
   const mockUsersService = {
     findByEmail: jest.fn(),
     findById: jest.fn(),
+    findByEmailWithPassword: jest.fn(),
+    findByIdWithRefreshToken: jest.fn(),
+    findByIdWithTfaSecret: jest.fn(),
+    findByEmailWithSecrets: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
   } as unknown as jest.Mocked<UsersService>;
@@ -22,6 +38,22 @@ describe('AuthService', () => {
     signAsync: jest.fn(),
     verifyAsync: jest.fn(),
   } as unknown as jest.Mocked<JwtService>;
+
+  const mockConfigService = {
+    get: jest.fn(),
+  };
+
+  const mockLoggingService = {
+    log: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+    error: jest.fn(),
+    logError: jest.fn(),
+  } as unknown as jest.Mocked<LoggingService>;
+
+  const mockAuditService = {
+    create: jest.fn(),
+  } as unknown as jest.Mocked<AuditService>;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -36,6 +68,18 @@ describe('AuthService', () => {
         {
           provide: JwtService,
           useValue: mockJwtService,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
+        },
+        {
+          provide: LoggingService,
+          useValue: mockLoggingService,
+        },
+        {
+          provide: AuditService,
+          useValue: mockAuditService,
         },
       ],
     }).compile();
@@ -89,7 +133,7 @@ describe('AuthService', () => {
       sub: 'user-id',
       username: 'user@example.com',
     });
-    usersService.findById.mockResolvedValueOnce({
+    usersService.findByIdWithRefreshToken.mockResolvedValueOnce({
       id: 'user-id',
       currentJwtToken: hashedRefreshToken,
     } as any);

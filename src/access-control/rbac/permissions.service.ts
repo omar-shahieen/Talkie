@@ -8,6 +8,7 @@ import { ServerMember } from '../../users/entities/server-member.entity';
 import { Server } from '../../servers/entities/server.entity';
 import { Repository } from 'typeorm';
 import { ChannelOverwrite } from '../../channels/entities/channel-overwrite.entity';
+import { LoggingService } from '../../logging/logging.service';
 
 @Injectable()
 export class PermissionsService {
@@ -18,17 +19,17 @@ export class PermissionsService {
     private readonly serverRepository: Repository<Server>,
     @InjectRepository(ServerMember)
     private readonly memberRepository: Repository<ServerMember>,
+    private readonly logger: LoggingService,
   ) {}
   async resolveForChannel(
     userId: string,
     serverId: string,
     channelId: string,
   ): Promise<PermissionsBitfield> {
-    console.log({
-      userId,
-      serverId,
-      channelId,
-    });
+    this.logger.debug(
+      `Resolving permissions for userId=${userId} serverId=${serverId} channelId=${channelId}`,
+      PermissionsService.name,
+    );
     // REPLACE WITH REAL DB CALLS
     const server = await this.serverRepository.findOneByOrFail({
       id: serverId,
@@ -81,6 +82,11 @@ export class PermissionsService {
 
     // Step 6 — user-specific overwrite
     perms = this.applyOverwrite(perms, overwrites, userId, 'user');
+
+    this.logger.debug(
+      `Resolved permissions for userId=${userId} channelId=${channelId} bitfield=${perms.toJSON()}`,
+      PermissionsService.name,
+    );
 
     return perms;
   }

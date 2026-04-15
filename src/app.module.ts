@@ -54,7 +54,7 @@ import { MessagesModule } from './messages/messages.module';
         subscribers: [__dirname + '/**/*.subscriber{.ts,.js}'],
         synchronize: config.get<string>('DB_SYNC') === 'true',
 
-        logging: true,
+        // logging: true,
       }),
     }),
     // GLOBAL MODULES
