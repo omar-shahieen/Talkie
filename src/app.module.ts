@@ -3,8 +3,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuditModule } from './audit/audit.module';
 import { MongooseModule } from '@nestjs/mongoose';
-import { EventEmitterModule } from '@nestjs/event-emitter';
-import { EventBusService } from './events/event-bus.service';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { AccessControlModule } from './access-control/access-control.module';
@@ -17,6 +15,8 @@ import { RolesModule } from './roles/roles.module';
 import { ChannelsModule } from './channels/channels.module';
 import { ServersModule } from './servers/servers.module';
 import { MessagesModule } from './messages/messages.module';
+import { EventsModule } from './events/events.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -24,12 +24,6 @@ import { MessagesModule } from './messages/messages.module';
       // db for audit
       process.env.MONGO_URI ?? 'mongodb://localhost:27017/discord_demo',
     ),
-    EventEmitterModule.forRoot({
-      // event emitter
-      wildcard: true, // enables 'user.*' subscriptions
-      delimiter: '.', // dot notation for namespacing
-      maxListeners: 20,
-    }),
     CacheModule.register({
       // cache
       isGlobal: true,
@@ -57,11 +51,14 @@ import { MessagesModule } from './messages/messages.module';
         // logging: true,
       }),
     }),
+
     // GLOBAL MODULES
     AuthModule,
     AccessControlModule,
     AuditModule,
     LoggingModule,
+    EventsModule,
+    MailModule,
 
     // APP_MODULES
     UsersModule,
@@ -73,7 +70,6 @@ import { MessagesModule } from './messages/messages.module';
   controllers: [AppController],
   providers: [
     AppService,
-    EventBusService,
     {
       provide: APP_INTERCEPTOR,
       useClass: CacheInterceptor,
