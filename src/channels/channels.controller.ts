@@ -25,6 +25,14 @@ export class ChannelsController {
     return this.channelsService.findAll();
   }
 
+  @Get('server/:serverId/visible/:userId')
+  findVisibleByServer(
+    @Param('serverId') serverId: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.channelsService.findVisibleByServer(serverId, userId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.channelsService.findOne(id);

@@ -1,7 +1,18 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ServersService } from './servers.service';
 import { CreateServerDto } from './dto/create-server.dto';
 import { UpdateServerDto } from './dto/update-server.dto';
+import { JoinServerDto } from './dto/join-server.dto';
+import { DiscoverServersDto } from './dto/discover-servers.dto';
 
 @Controller('servers')
 export class ServersController {
@@ -17,6 +28,26 @@ export class ServersController {
     return this.serversService.findAll();
   }
 
+  @Get('mine/:userId')
+  findForUser(@Param('userId') userId: string) {
+    return this.serversService.findForUser(userId);
+  }
+
+  @Get('discovery/public')
+  discover(@Query() query: DiscoverServersDto) {
+    return this.serversService.discover(query);
+  }
+
+  @Post('join')
+  joinByInvite(@Body() payload: JoinServerDto) {
+    return this.serversService.joinByInvite(payload);
+  }
+
+  @Delete(':id/leave/:userId')
+  leave(@Param('id') id: string, @Param('userId') userId: string) {
+    return this.serversService.leaveServer(id, userId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.serversService.findOne(id);
@@ -28,7 +59,7 @@ export class ServersController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.serversService.remove(id);
+  remove(@Param('id') id: string, @Query('requesterId') requesterId: string) {
+    return this.serversService.remove(id, requesterId);
   }
 }
