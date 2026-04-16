@@ -39,7 +39,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
             from: config.get<string>('MAIL_FROM'),
           },
           template: {
-            dir: join(__dirname, 'templates'),
+            dir: join(process.cwd(), 'templates'),
             adapter: new HandlebarsAdapter(),
             options: {
               strict: true,

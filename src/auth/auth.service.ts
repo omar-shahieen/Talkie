@@ -13,8 +13,8 @@ import { SignUpDto } from './dtos/SignUpDto';
 import { ConfigService } from '@nestjs/config';
 import * as authenticator from 'otplib';
 import { LoggingService } from '../logging/logging.service';
-import { EventBusService } from '../events/event-bus.service';
-import { AppEvents } from '../events/events.enum';
+import { EventBusService } from '../common/events/event-bus.service';
+import { AppEvents } from '../common/events/events.enum';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +27,7 @@ export class AuthService {
   ) {}
 
   private redactEmail(email: string): string {
+    // masking emails to prevent email leakage
     const [name, domain] = email.split('@');
     if (!name || !domain) return 'unknown';
     const maskedName =
@@ -38,10 +39,31 @@ export class AuthService {
   async validateUser(email: string, password: string) {
     const user = await this.usersService.findByEmailWithPassword(email);
 
-    if (!user) return null;
+    if (!user) {
+      this.logger.warn(
+        `Auth login failed: user not found email=${this.redactEmail(email)}`,
+        AuthService.name,
+      );
+      this.eventBus.emit(AppEvents.USER_LOGIN_FAILED, {
+        emailRedacted: this.redactEmail(email),
+        reason: 'user-not-found',
+      });
+      return null;
+    }
 
     const isMatch = await user.comparePassword(password);
-    if (!isMatch) return null;
+    if (!isMatch) {
+      this.logger.warn(
+        `Auth login failed: invalid credentials userId=${user.id}`,
+        AuthService.name,
+      );
+      this.eventBus.emit(AppEvents.USER_LOGIN_FAILED, {
+        userId: user.id,
+        emailRedacted: this.redactEmail(user.email),
+        reason: 'invalid-password',
+      });
+      return null;
+    }
 
     return {
       id: user.id,
@@ -96,12 +118,20 @@ export class AuthService {
     try {
       decodedUser = await this.jwtService.verifyAsync<JwtPayload>(token);
     } catch {
+      this.logger.warn(
+        'TFA login token validation failed: invalid or expired token',
+        AuthService.name,
+      );
       throw new UnauthorizedException(
         'Invalid or expired TFA login token. Please sign in again.',
       );
     }
 
     if (!decodedUser.tfa) {
+      this.logger.warn(
+        `TFA login token rejected for userId=${decodedUser.sub}: missing tfa flag`,
+        AuthService.name,
+      );
       throw new UnauthorizedException(
         'Invalid TFA login token payload. Please sign in again.',
       );
@@ -126,7 +156,8 @@ export class AuthService {
     );
     this.eventBus.emit(AppEvents.USER_SIGNUP, {
       userId: createdUser.id,
-      email: this.redactEmail(email),
+      email,
+      emailRedacted: this.redactEmail(email),
       username,
     });
 
@@ -194,6 +225,7 @@ export class AuthService {
     email: string;
     name: string;
   }) {
+    const redactedEmail = this.redactEmail(profile.email);
     let user = await this.usersService.findByEmailWithSecrets(profile.email);
 
     if (!user) {
@@ -208,10 +240,23 @@ export class AuthService {
         googleId: profile.googleId,
         password: '',
       });
+      this.logger.log(
+        `Google OAuth user created userId=${user.id} email=${redactedEmail}`,
+        AuthService.name,
+      );
     } else if (!user.googleId) {
       user = await this.usersService.update(user.id, {
         googleId: profile.googleId,
       });
+      this.logger.log(
+        `Google OAuth account linked userId=${user.id} email=${redactedEmail}`,
+        AuthService.name,
+      );
+    } else {
+      this.logger.debug(
+        `Google OAuth login matched existing linked userId=${user.id} email=${redactedEmail}`,
+        AuthService.name,
+      );
     }
 
     return user;
@@ -233,11 +278,21 @@ export class AuthService {
   // Saves the secret temporarily — user must confirm with a token before it's "live"
   async initiateTfaEnabling(email: string): Promise<{ uri: string }> {
     const user = await this.usersService.findByEmailWithSecrets(email);
-    if (!user) throw new NotFoundException('User was not found for TFA setup');
+    if (!user) {
+      this.logger.warn(
+        `TFA setup initiation failed: user not found email=${this.redactEmail(email)}`,
+        AuthService.name,
+      );
+      throw new NotFoundException('User was not found for TFA setup');
+    }
 
     const { uri, secret } = this.generateSecret(email);
 
     await this.usersService.update(user.id, { tfaSecret: secret });
+    this.logger.log(
+      `TFA setup initiated for userId=${user.id} email=${this.redactEmail(email)}`,
+      AuthService.name,
+    );
 
     // Return the URI so the frontend can render the QR code
     return { uri };
@@ -304,7 +359,8 @@ export class AuthService {
     this.logger.log(`TFA enabled for userId=${user.id}`, AuthService.name);
     this.eventBus.emit(AppEvents.USER_TFA_ENABLED, {
       userId: user.id,
-      email: this.redactEmail(email),
+      email,
+      emailRedacted: this.redactEmail(email),
     });
   }
 
@@ -342,7 +398,8 @@ export class AuthService {
     this.logger.log(`TFA disabled for userId=${user.id}`, AuthService.name);
     this.eventBus.emit(AppEvents.USER_TFA_DISABLED, {
       userId: user.id,
-      email: this.redactEmail(email),
+      email,
+      emailRedacted: this.redactEmail(email),
     });
   }
 

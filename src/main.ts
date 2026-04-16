@@ -28,6 +28,15 @@ async function bootstrap() {
     }),
   );
 
+  // Catch unhandled async errors that escape the NestJS pipeline
+  process.on('unhandledRejection', (reason) => {
+    logger.error('Unhandled rejection', String(reason));
+    process.exit(1);
+  });
+  process.on('uncaughtException', (err) => {
+    logger.error('Uncaught exception', err.stack);
+    process.exit(1);
+  });
   await app.listen(process.env.PORT ?? 3000);
 
   logger.log(

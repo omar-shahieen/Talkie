@@ -1,14 +1,14 @@
 import { DataSource } from 'typeorm';
 import { faker } from '@faker-js/faker';
 
-import { User } from '../users/entities/user.entity';
-import { Server } from '../servers/entities/server.entity';
-import { Role } from '../roles/entities/role.entity';
-import { ServerMember } from '../users/entities/server-member.entity';
-import { Channel } from '../channels/entities/channel.entity';
-import { ChannelOverwrite } from '../channels/entities/channel-overwrite.entity';
-import { Message } from '../messages/entities/message.entity';
-import { UserSubscriber } from '../users/user.subscriber';
+import { User } from '../../users/entities/user.entity';
+import { Server } from '../../servers/entities/server.entity';
+import { Role } from '../../roles/entities/role.entity';
+import { ServerMember } from '../../users/entities/server-member.entity';
+import { Channel } from '../../channels/entities/channel.entity';
+import { ChannelOverwrite } from '../../channels/entities/channel-overwrite.entity';
+import { Message } from '../../messages/entities/message.entity';
+import { UserSubscriber } from '../../users/user.subscriber';
 
 // ---------------------------------------------------
 // Standalone DataSource — no NestJS/AppModule needed

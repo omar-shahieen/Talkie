@@ -1,5 +1,5 @@
 import { AuditService } from './audit.service';
-import { AppEvents } from '../events/events.enum';
+import { AppEvents } from '../common/events/events.enum';
 import { OnEvent } from '@nestjs/event-emitter';
 import { LoggingService } from '../logging/logging.service';
 

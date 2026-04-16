@@ -8,8 +8,8 @@ import {
 import { PERMISSION_KEY } from './require-permission.decorator';
 import { PermissionsService } from './permissions.service';
 import { LoggingService } from '../../logging/logging.service';
-import { EventBusService } from '../../events/event-bus.service';
-import { AppEvents } from '../../events/events.enum';
+import { EventBusService } from '../../common/events/event-bus.service';
+import { AppEvents } from '../../common/events/events.enum';
 
 import { Request } from 'express';
 
@@ -52,6 +52,10 @@ export class PermissionsGuard implements CanActivate {
     const { userId, serverId, channelId } = this.extractContext(request);
 
     if (!userId || !serverId || !channelId) {
+      this.logger.warn(
+        `Permission context rejected: userId=${userId ?? 'missing'} serverId=${serverId ?? 'missing'} channelId=${channelId ?? 'missing'}`,
+        PermissionsGuard.name,
+      );
       throw new ForbiddenException(
         'Permission context is incomplete: userId, serverId and channelId are required.',
       );

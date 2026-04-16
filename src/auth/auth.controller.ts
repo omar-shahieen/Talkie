@@ -19,6 +19,7 @@ import { SignInDto } from './dtos/SignInDto';
 import { SignUpDto } from './dtos/SignUpDto';
 import { VerifyTfaDto } from './dtos/tfa.dto';
 import { AuthGoogleGuard } from './guards/auth-google.guard';
+import { LoggingService } from '../logging/logging.service';
 
 type AuthenticatedRequest = Request & {
   user: { id: string; email: string; isTfaEnabled?: boolean };
@@ -26,7 +27,10 @@ type AuthenticatedRequest = Request & {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly logger: LoggingService,
+  ) {}
 
   @HttpCode(HttpStatus.OK)
   @Public()
@@ -58,8 +62,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('refresh')
   createRefreshToken(@Cookies('jwt_refresh') jwt_refresh: string) {
-    if (!jwt_refresh)
+    if (!jwt_refresh) {
+      this.logger.warn(
+        'Refresh token request rejected: missing jwt_refresh cookie',
+        AuthController.name,
+      );
       throw new UnauthorizedException('No refresh token provided');
+    }
     return this.authService.refreshToken(jwt_refresh);
   }
 

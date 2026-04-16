@@ -4,6 +4,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import type { Response } from 'express';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { LoggingService } from '../logging/logging.service';
 
 jest.mock('otplib', () => ({
   __esModule: true,
@@ -30,6 +31,13 @@ describe('AuthController', () => {
     signUp: jest.fn(),
   };
 
+  const mockLoggingService = {
+    warn: jest.fn(),
+    log: jest.fn(),
+    debug: jest.fn(),
+    error: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -39,6 +47,10 @@ describe('AuthController', () => {
         {
           provide: AuthService,
           useValue: mockAuthService,
+        },
+        {
+          provide: LoggingService,
+          useValue: mockLoggingService,
         },
       ],
     }).compile();
@@ -81,5 +93,9 @@ describe('AuthController', () => {
     expect(() =>
       controller.createRefreshToken(undefined as unknown as string),
     ).toThrow(UnauthorizedException);
+    expect(mockLoggingService.warn).toHaveBeenCalledWith(
+      'Refresh token request rejected: missing jwt_refresh cookie',
+      AuthController.name,
+    );
   });
 });
