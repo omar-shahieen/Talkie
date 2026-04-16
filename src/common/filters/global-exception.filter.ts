@@ -11,7 +11,16 @@ import { AppException } from '../exceptions/base.exception';
 import { AsyncContext } from '../context/async-context.service';
 import { LoggingService } from 'src/logging/logging.service';
 import { ErrorResponse } from './interfaces/errorResponse.interface';
+import { QueryFailedError } from 'typeorm';
 
+//  Define the shape of a Postgres driver error
+// Postgres provides more context than just 'code', so we type those too.
+interface PostgresDriverError {
+  code?: string;
+  detail?: string; // e.g., "Key (email)=(test@test.com) already exists."
+  table?: string;
+  column?: string;
+}
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   constructor(
@@ -55,7 +64,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     // If it's a non-operational error (programming bug), crash the process
     // after a delay so the response still sends to the client. This allows us to catch and fix bugs instead of silently swallowing them.
     if (!isOperational) {
-      setTimeout(() => process.exit(1), 500);
+      this.logger.warn('unhandled programming error', logMeta);
     }
 
     res.status(statusCode).json(body);
@@ -77,6 +86,62 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         isOperational: exception.isOperational,
       };
     }
+    // Check if it's a TypeORM database error
+    if (exception instanceof QueryFailedError) {
+      const driverError = exception.driverError as
+        | PostgresDriverError
+        | undefined;
+      const code = driverError?.code;
+
+      // 2. Handle specific Postgres error codes
+      switch (code) {
+        case '23505': // unique_violation
+          return {
+            statusCode: 409,
+            code: 'DUPLICATE_KEY',
+            message: 'A record with this value already exists.',
+            context: { detail: driverError?.detail },
+            isOperational: true,
+          };
+
+        case '23503': // foreign_key_violation
+          return {
+            statusCode: 409, // or 400, depending on your preference
+            code: 'FOREIGN_KEY_VIOLATION',
+            message:
+              'The referenced record does not exist or is currently in use.',
+            context: { table: driverError?.table, detail: driverError?.detail },
+            isOperational: true,
+          };
+
+        case '23502': // not_null_violation
+          return {
+            statusCode: 400,
+            code: 'MISSING_REQUIRED_FIELD',
+            message: `A required field is missing data.`,
+            context: { column: driverError?.column },
+            isOperational: true,
+          };
+
+        case '22P02': // invalid_text_representation (e.g., passing a word into a UUID/Integer field)
+          return {
+            statusCode: 400,
+            code: 'INVALID_INPUT_FORMAT',
+            message:
+              'The data provided is in an invalid format for the target field.',
+            isOperational: true,
+          };
+
+        case '23514': // check_violation (e.g., failing a custom CHECK constraint in the DB)
+          return {
+            statusCode: 400,
+            code: 'CHECK_CONSTRAINT_FAILED',
+            message: 'The provided data failed a database validation check.',
+            context: { table: driverError?.table },
+            isOperational: true,
+          };
+      }
+    }
     if (exception instanceof HttpException) {
       const res = exception.getResponse();
       const message =
@@ -97,6 +162,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     };
   }
 
+
+  
   /** Never leak internal details to production clients */
   private sanitize(status: number, message: string): string {
     if (status >= 500)

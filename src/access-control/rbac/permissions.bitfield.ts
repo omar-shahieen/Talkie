@@ -1,8 +1,14 @@
 // src/permissions/permissions.bitfield.ts
+import { Exclude, Expose } from 'class-transformer';
 import { Permission } from './permissions.constants';
 
 export class PermissionsBitfield {
-  constructor(private bits: bigint = 0n) {}
+  @Exclude()
+  private bits: bigint = 0n;
+
+  constructor(bits: bigint = 0n) {
+    this.bits = bits;
+  }
 
   static from(value: bigint | string): PermissionsBitfield {
     return new PermissionsBitfield(BigInt(value));
@@ -38,6 +44,11 @@ export class PermissionsBitfield {
     return Object.entries(Permission)
       .filter(([, bit]) => (this.bits & bit) === bit)
       .map(([name]) => name);
+  }
+
+  @Expose()
+  get serialized(): string {
+    return this.bits.toString();
   }
 
   valueOf(): bigint {

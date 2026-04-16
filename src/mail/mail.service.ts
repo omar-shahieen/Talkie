@@ -13,7 +13,6 @@ export class MailService {
     private readonly mailerService: MailerService,
     private readonly logger: LoggingService,
   ) {}
-
   async sendEmail(payload: IMailPayload): Promise<boolean> {
     const { to, subject, template, context, attachments, from } = payload;
 

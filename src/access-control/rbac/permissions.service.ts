@@ -30,7 +30,6 @@ export class PermissionsService {
       `Resolving permissions for userId=${userId} serverId=${serverId} channelId=${channelId}`,
       PermissionsService.name,
     );
-    // REPLACE WITH REAL DB CALLS
     const server = await this.serverRepository.findOneByOrFail({
       id: serverId,
     });
