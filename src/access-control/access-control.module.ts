@@ -6,11 +6,18 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ServerMember } from '../users/entities/server-member.entity';
 import { Server } from '../servers/entities/server.entity';
 import { ChannelOverwrite } from '../channels/entities/channel-overwrite.entity';
+import { APP_GUARD } from '@nestjs/core';
 
 @Global()
 @Module({
   imports: [TypeOrmModule.forFeature([ServerMember, Server, ChannelOverwrite])],
-  providers: [PermissionsService, PermissionsGuard],
+  providers: [
+    PermissionsService,
+    {
+      provide: APP_GUARD,
+      useClass: PermissionsGuard,
+    },
+  ],
   exports: [PermissionsService, PermissionsGuard],
   controllers: [AccessControlController],
 })
