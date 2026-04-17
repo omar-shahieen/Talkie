@@ -7,7 +7,6 @@ import { Permission } from './rbac/permissions.constants';
 export class AccessControlController {
   constructor(private readonly permissionsService: PermissionsService) {}
 
-  @UseGuards(PermissionsGuard)
   @Get('resolve')
   @RequirePermissions(Permission.Administrator) // Example: require Administrator permission to access this endpoint
   resolve(

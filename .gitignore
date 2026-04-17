@@ -11,9 +11,9 @@ pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
-discord-frontend
 # OS
 .DS_Store
+discord-frontend
 
 # Tests
 /coverage
