@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AppEvents } from '../common/events/events.enum';
+import { AppEvents } from '../events/events.enum';
 import { InjectModel } from '@nestjs/mongoose';
 import { AuditLog, AuditLogDocument } from './audit-log.schema';
 import { Model } from 'mongoose';

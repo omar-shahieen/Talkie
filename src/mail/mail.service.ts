@@ -5,7 +5,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { MailerService } from '@nestjs-modules/mailer';
 import { IMailPayload } from './interfaces/mail.interface';
 import { LoggingService } from '../logging/logging.service';
-import { AppEvents } from '../common/events/events.enum';
+import { AppEvents } from '../events/events.enum';
 
 @Injectable()
 export class MailService {

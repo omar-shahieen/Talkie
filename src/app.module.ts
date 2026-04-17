@@ -15,7 +15,7 @@ import { RolesModule } from './roles/roles.module';
 import { ChannelsModule } from './channels/channels.module';
 import { ServersModule } from './servers/servers.module';
 import { MessagesModule } from './messages/messages.module';
-import { EventsModule } from './common/events/events.module';
+import { EventsModule } from './events/events.module';
 import { MailModule } from './mail/mail.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';

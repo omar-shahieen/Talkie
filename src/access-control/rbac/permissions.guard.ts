@@ -8,8 +8,8 @@ import {
 import { PERMISSION_KEY } from './require-permission.decorator';
 import { PermissionsService } from './permissions.service';
 import { LoggingService } from '../../logging/logging.service';
-import { EventBusService } from '../../common/events/event-bus.service';
-import { AppEvents } from '../../common/events/events.enum';
+import { EventBusService } from '../../events/event-bus.service';
+import { AppEvents } from '../../events/events.enum';
 
 import { Request } from 'express';
 

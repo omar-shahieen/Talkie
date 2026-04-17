@@ -7,9 +7,9 @@ import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { LoggingService } from '../logging/logging.service';
-import { EventBusService } from '../common/events/event-bus.service';
+import { EventBusService } from '../events/event-bus.service';
 import { User } from '../users/entities/user.entity';
-import { AppEvents } from '../common/events/events.enum';
+import { AppEvents } from '../events/events.enum';
 
 jest.mock('otplib', () => ({
   __esModule: true,

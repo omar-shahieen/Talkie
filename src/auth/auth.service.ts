@@ -13,8 +13,8 @@ import { SignUpDto } from './dtos/SignUpDto';
 import { ConfigService } from '@nestjs/config';
 import * as authenticator from 'otplib';
 import { LoggingService } from '../logging/logging.service';
-import { EventBusService } from '../common/events/event-bus.service';
-import { AppEvents } from '../common/events/events.enum';
+import { EventBusService } from '../events/event-bus.service';
+import { AppEvents } from '../events/events.enum';
 
 @Injectable()
 export class AuthService {
