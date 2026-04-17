@@ -1,11 +1,11 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
 } from '@nestjs/common';
 import { ChannelsService } from './channels.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
@@ -25,18 +25,26 @@ export class ChannelsController {
     return this.channelsService.findAll();
   }
 
+  @Get('server/:serverId/visible/:userId')
+  findVisibleByServer(
+    @Param('serverId') serverId: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.channelsService.findVisibleByServer(serverId, userId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.channelsService.findOne(+id);
+    return this.channelsService.findOne(id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateChannelDto: UpdateChannelDto) {
-    return this.channelsService.update(+id, updateChannelDto);
+    return this.channelsService.update(id, updateChannelDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.channelsService.remove(+id);
+    return this.channelsService.remove(id);
   }
 }

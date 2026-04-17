@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  app.enableCors({ origin: true, credentials: true });
   // replace winston logger with NestJS LoggerService
   const logger = app.get(LoggingService);
   app.useLogger(logger);

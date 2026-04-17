@@ -19,6 +19,15 @@ import { APP_GUARD } from '@nestjs/core';
     },
   ],
   exports: [PermissionsService, PermissionsGuard],
+  imports: [
+    TypeOrmModule.forFeature([
+      ServerMember,
+      Server,
+      Channel,
+      Role,
+      ChannelOverwrite,
+    ]),
+  ],
   controllers: [AccessControlController],
 })
 export class AccessControlModule {}

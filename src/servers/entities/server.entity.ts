@@ -14,6 +14,21 @@ export class Server {
   @Column()
   ownerId: string;
 
+  @Column({ default: false })
+  isPublic: boolean;
+
+  @Column({ nullable: true })
+  description?: string;
+
+  @Column({ nullable: true })
+  category?: string;
+
+  @Column('simple-array', { nullable: true })
+  tags?: string[];
+
+  @Column({ unique: true })
+  inviteCode: string;
+
   @OneToMany(() => Role, (role) => role.server)
   roles: Role[];
 

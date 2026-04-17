@@ -1,4 +1,12 @@
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+<<<<<<< HEAD
 import {
   CanActivate,
   ExecutionContext,
@@ -11,24 +19,12 @@ import { LoggingService } from '../../logging/logging.service';
 import { EventBusService } from '../../events/event-bus.service';
 import { AppEvents } from '../../events/events.enum';
 
+=======
+import { PERMISSION_KEY } from './require-permission.decorator';
+import { PermissionsService } from './permissions.service';
+>>>>>>> 94bb6182375aedd915386855484f9a84710886df
 import { Request } from 'express';
 
-// This matches your JWT payload structure
-export interface AuthenticatedRequest extends Request {
-  user: {
-    id: string;
-    email: string;
-  };
-  // Define params/body if you want extra strictness
-  params: {
-    serverId?: string;
-    channelId?: string;
-  };
-  body: {
-    serverId?: string;
-    channelId?: string;
-  };
-}
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(
@@ -45,9 +41,10 @@ export class PermissionsGuard implements CanActivate {
     );
 
     if (!requiredPermissions?.length) {
-      return true; // No permissions required, allow access
+      return true;
     }
 
+<<<<<<< HEAD
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const { userId, serverId, channelId } = this.extractContext(request);
 
@@ -59,6 +56,11 @@ export class PermissionsGuard implements CanActivate {
       throw new ForbiddenException(
         'Permission context is incomplete: userId, serverId and channelId are required.',
       );
+=======
+    const { userId, serverId, channelId } = this.extractContext(context);
+    if (!userId || !channelId) {
+      throw new UnauthorizedException();
+>>>>>>> 94bb6182375aedd915386855484f9a84710886df
     }
 
     const perms = await this.permissionsService.resolveForChannel(
@@ -66,6 +68,7 @@ export class PermissionsGuard implements CanActivate {
       serverId,
       channelId,
     );
+<<<<<<< HEAD
     const isAllowed = perms.hasAll(...requiredPermissions);
 
     if (!isAllowed) {
@@ -86,16 +89,60 @@ export class PermissionsGuard implements CanActivate {
       throw new ForbiddenException(
         'You do not have the required permissions for this channel action.',
       );
+=======
+
+    if (!perms.hasAll(...requiredPermissions)) {
+      throw new ForbiddenException();
+>>>>>>> 94bb6182375aedd915386855484f9a84710886df
     }
 
     return true;
   }
 
-  private extractContext(request: AuthenticatedRequest) {
+  private extractContext(context: ExecutionContext): {
+    userId?: string;
+    serverId?: string;
+    channelId?: string;
+  } {
+    if (context.getType<'http' | 'ws'>() === 'http') {
+      const request = context
+        .switchToHttp()
+        .getRequest<Request & Record<string, any>>();
+      const user = request.user as Record<string, unknown> | undefined;
+
+      return {
+        userId: user ? String(user.sub ?? user.id) : undefined,
+        serverId: this.pickString(request.params.serverId ?? request.body.serverId),
+        channelId: this.pickString(
+          request.params.channelId ?? request.body.channelId,
+        ),
+      };
+    }
+
+    const client = context.switchToWs().getClient<{
+      data?: Record<string, any>;
+    }>();
+    const payload = context.switchToWs().getData<Record<string, any>>() ?? {};
+    const socketUser = client.data?.user;
+
     return {
-      userId: request.user.id,
-      serverId: request.params.serverId ?? request.body.serverId ?? null,
-      channelId: request.params.channelId ?? request.body.channelId ?? null,
+      userId: socketUser ? String(socketUser.sub ?? socketUser.id) : undefined,
+      serverId: this.pickString(payload.serverId),
+      channelId: this.pickString(payload.channelId),
     };
   }
+
+  private pickString(value: unknown): string | undefined {
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    if (Array.isArray(value) && typeof value[0] === 'string') {
+      return value[0];
+    }
+
+    return undefined;
+  }
 }
+
+export { PermissionsGuard as PermissionGuard };
