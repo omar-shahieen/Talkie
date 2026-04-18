@@ -3,11 +3,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuditModule } from './audit/audit.module';
 import { MongooseModule } from '@nestjs/mongoose';
-<<<<<<< HEAD
-=======
-import { EventEmitterModule } from '@nestjs/event-emitter';
-import { EventsModule } from './events/events.module';
->>>>>>> 94bb6182375aedd915386855484f9a84710886df
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { AccessControlModule } from './access-control/access-control.module';
@@ -19,7 +14,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RolesModule } from './roles/roles.module';
 import { ChannelsModule } from './channels/channels.module';
 import { ServersModule } from './servers/servers.module';
-import { RealtimeModule } from './realtime/realtime.module';
 import { MessagesModule } from './messages/messages.module';
 import { EventsModule } from './events/events.module';
 import { MailModule } from './mail/mail.module';
@@ -27,6 +21,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { AsyncContext } from './common/context/async-context.service';
 import { ContextMiddleware } from './common/middleware/context.middleware';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -41,8 +36,8 @@ import { ContextMiddleware } from './common/middleware/context.middleware';
     }),
     ConfigModule.forRoot({ isGlobal: true }),
     EventsModule,
-      ConfigModule.forRoot({ isGlobal: true }),
-      EventsModule,
+    ConfigModule.forRoot({ isGlobal: true }),
+    EventsModule,
 
     TypeOrmModule.forRootAsync({
       // postgress
@@ -78,8 +73,8 @@ import { ContextMiddleware } from './common/middleware/context.middleware';
     RolesModule,
     ChannelsModule,
     ServersModule,
-    RealtimeModule,
     MessagesModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

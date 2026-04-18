@@ -6,16 +6,16 @@ import { ServerMember } from '../../users/entities/server-member.entity';
 @Entity('servers')
 export class Server {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  name: string;
+  name!: string;
 
   @Column()
-  ownerId: string;
+  ownerId!: string;
 
   @Column({ default: false })
-  isPublic: boolean;
+  isPublic!: boolean;
 
   @Column({ nullable: true })
   description?: string;
@@ -27,14 +27,14 @@ export class Server {
   tags?: string[];
 
   @Column({ unique: true })
-  inviteCode: string;
+  inviteCode!: string;
 
   @OneToMany(() => Role, (role) => role.server)
-  roles: Role[];
+  roles!: Role[];
 
   @OneToMany(() => Channel, (channel) => channel.server)
-  channels: Channel[];
+  channels!: Channel[];
 
   @OneToMany(() => ServerMember, (member) => member.server)
-  members: ServerMember[];
+  members!: ServerMember[];
 }

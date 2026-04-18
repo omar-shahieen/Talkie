@@ -1,6 +1,7 @@
 export enum AppEvents {
   USER_LOGIN = 'user.login',
   USER_LOGIN_FAILED = 'user.login.failed',
+  USER_SOCKET_LOGIN_FAILED = 'user.socket.login.failed',
   USER_SIGNUP = 'user.signup',
   USER_LOGOUT = 'user.logout',
   USER_TFA_ENABLED = 'user.tfa.enabled',

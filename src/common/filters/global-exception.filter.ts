@@ -162,8 +162,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     };
   }
 
-
-  
   /** Never leak internal details to production clients */
   private sanitize(status: number, message: string): string {
     if (status >= 500)

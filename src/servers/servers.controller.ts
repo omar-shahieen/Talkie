@@ -1,13 +1,4 @@
 import {
-<<<<<<< HEAD
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-=======
   Body,
   Controller,
   Delete,
@@ -16,7 +7,6 @@ import {
   Patch,
   Post,
   Query,
->>>>>>> 94bb6182375aedd915386855484f9a84710886df
 } from '@nestjs/common';
 import { ServersService } from './servers.service';
 import { CreateServerDto } from './dto/create-server.dto';

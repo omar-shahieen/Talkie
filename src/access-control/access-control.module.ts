@@ -7,10 +7,11 @@ import { ServerMember } from '../users/entities/server-member.entity';
 import { Server } from '../servers/entities/server.entity';
 import { ChannelOverwrite } from '../channels/entities/channel-overwrite.entity';
 import { APP_GUARD } from '@nestjs/core';
+import { Channel } from 'src/channels/entities/channel.entity';
+import { Role } from 'src/roles/entities/role.entity';
 
 @Global()
 @Module({
-  imports: [TypeOrmModule.forFeature([ServerMember, Server, ChannelOverwrite])],
   providers: [
     PermissionsService,
     {

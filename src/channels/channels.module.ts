@@ -5,10 +5,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Channel } from './entities/channel.entity';
 import { ChannelOverwrite } from './entities/channel-overwrite.entity';
 import { AccessControlModule } from '../access-control/access-control.module';
+import { ChannelMember } from './entities/channel-member.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Channel, ChannelOverwrite]),
+    TypeOrmModule.forFeature([Channel, ChannelOverwrite, ChannelMember]),
     AccessControlModule,
   ],
   controllers: [ChannelsController],

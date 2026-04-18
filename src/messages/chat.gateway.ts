@@ -1,6 +1,12 @@
-import { Injectable, Logger, UseGuards } from '@nestjs/common';
+import { Injectable, UseGuards } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { OnEvent } from '@nestjs/event-emitter';
+
+import { AppEvents } from '../events/events.enum';
+import { RealtimeAuthGuard } from '../auth/guards/auth-realtime.guard';
+import { RequirePermissions } from '../access-control/rbac/require-permission.decorator';
+import { Permission } from '../access-control/rbac/permissions.constants';
+import { LoggingService } from 'src/logging/logging.service';
 import {
   ConnectedSocket,
   MessageBody,
@@ -10,24 +16,11 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { jwtConstants, JwtPayload } from '../auth/constants';
-import { AppEvents } from '../events/events.enum';
-import { Server, Socket } from 'socket.io';
-import { RealtimeAuthGuard } from './realtime-auth.guard';
-import { PermissionGuard } from '../access-control/rbac/permissions.guard';
-import { RequirePermissions } from '../access-control/rbac/require-permission.decorator';
-import { Permission } from '../access-control/rbac/permissions.constants';
+import { Socket, Server } from 'socket.io';
+import { Notification } from 'src/notifications/entities/notification.entity';
+import { type AuthenticatedSocket } from 'src/auth/types/authenticated-socket.type';
 
 type PresenceStatus = 'online' | 'idle' | 'dnd' | 'offline';
-
-interface SocketUser extends JwtPayload {
-  email?: string;
-  status?: PresenceStatus;
-}
-
-interface SocketContext {
-  user?: SocketUser;
-}
 
 interface ChannelRoomPayload {
   serverId: string;
@@ -42,46 +35,48 @@ interface PresencePayload {
   status: PresenceStatus;
 }
 
+interface MessageCreatedPayload {
+  id: string;
+  channelId: string;
+  content: string;
+  authorId: string;
+  createdAt: Date;
+
+  // These might be explicitly added by your MessageService before emitting
+  serverId?: string; // Will exist if it's a Server channel
+  senderId?: string; // Used for DMs
+  recipientId?: string; // Used for DMs
+}
+
 @Injectable()
-// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-@UseGuards(RealtimeAuthGuard, PermissionGuard)
+@UseGuards(RealtimeAuthGuard)
 @WebSocketGateway({
-  namespace: '/realtime',
+  namespace: 'chat',
   cors: { origin: true, credentials: true },
 })
-export class RealtimeGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
 
-  private readonly logger = new Logger(RealtimeGateway.name);
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly logger: LoggingService,
+  ) {
+    this.logger.child({ context: ChatGateway.name });
+  }
 
-  constructor(private readonly jwtService: JwtService) {}
-
-  async handleConnection(client: Socket): Promise<void> {
-    const user = await this.authenticate(client);
-
-    if (!user) {
-      client.emit('error', {
-        error: 'Unauthorized websocket connection',
-        code: 'WS_UNAUTHORIZED',
-      });
-      client.disconnect(true);
-      return;
-    }
-
-    (client.data as SocketContext).user = user;
+  handleConnection(client: AuthenticatedSocket) {
+    const user = client.data.user;
 
     client.emit('connection:ready', {
-      userId: user.sub,
+      userId: user.id,
       status: 'online',
     });
 
-    this.logger.log(`Socket connected: ${client.id} (${user.sub})`);
+    void this.logger.log(`Socket connected: ${client.id} (${user.id})`);
   }
 
-  handleDisconnect(client: Socket): void {
+  handleDisconnect(client: AuthenticatedSocket) {
     const userId = this.currentUserId(client);
 
     if (userId) {
@@ -93,7 +88,7 @@ export class RealtimeGateway
 
   @SubscribeMessage('server:join')
   joinServer(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() serverId: string,
   ) {
     void client.join(this.serverRoom(serverId));
@@ -102,7 +97,7 @@ export class RealtimeGateway
 
   @SubscribeMessage('server:leave')
   leaveServer(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() serverId: string,
   ) {
     void client.leave(this.serverRoom(serverId));
@@ -112,7 +107,7 @@ export class RealtimeGateway
   @SubscribeMessage('channel:join')
   @RequirePermissions(Permission.ViewChannel)
   joinChannel(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() payload: ChannelRoomPayload,
   ) {
     void client.join(this.serverRoom(payload.serverId));
@@ -122,17 +117,37 @@ export class RealtimeGateway
 
   @SubscribeMessage('channel:leave')
   leaveChannel(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() payload: ChannelRoomPayload,
   ) {
     void client.leave(this.channelRoom(payload.channelId));
     return { event: 'channel:left', ...payload };
   }
 
+  @SubscribeMessage('dm:join')
+  joinDM(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: { channelId: string }, // DMs are just channels now!
+  ) {
+    // Before doing this, you'd usually query the DB to ensure this client.user.id
+    // actually exists in the ChannelMember table for this channelId.
+    void client.join(this.channelRoom(payload.channelId));
+    return { event: 'dm:joined', channelId: payload.channelId };
+  }
+
+  @SubscribeMessage('dm:leave')
+  leaveDM(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: { channelId: string },
+  ) {
+    void client.leave(this.channelRoom(payload.channelId));
+    return { event: 'dm:left', channelId: payload.channelId };
+  }
+
   @SubscribeMessage('typing:start')
   @RequirePermissions(Permission.SendMessages)
   startTyping(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() payload: TypingPayload,
   ) {
     this.emitToChannel(payload.channelId, 'typing:start', {
@@ -148,7 +163,7 @@ export class RealtimeGateway
   @SubscribeMessage('typing:stop')
   @RequirePermissions(Permission.SendMessages)
   stopTyping(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() payload: TypingPayload,
   ) {
     this.emitToChannel(payload.channelId, 'typing:stop', {
@@ -163,7 +178,7 @@ export class RealtimeGateway
 
   @SubscribeMessage('presence:set')
   setPresence(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() payload: PresencePayload,
   ) {
     const userId = this.currentUserId(client);
@@ -173,12 +188,39 @@ export class RealtimeGateway
   }
 
   @OnEvent(AppEvents.MESSAGE_CREATED)
-  handleMessageCreated(payload: Record<string, unknown>) {
-    this.emitToChannel(
-      this.readString(payload, 'channelId'),
-      'message:created',
-      payload,
-    );
+  handleMessageCreated(payload: MessageCreatedPayload) {
+    const channelId = payload.channelId;
+    const serverId = payload.serverId;
+    const messageId = payload.id;
+    // emit the message to active users
+    this.server
+      .to(this.channelRoom(channelId))
+      .emit('message:created', payload);
+
+    // emit unread trigger
+    if (serverId) {
+      // it is a server channel , emit to the whole server to update the bold indicator
+      this.server.to(this.serverRoom(serverId)).emit('channel:updated', {
+        channelId,
+        lastMessageId: messageId,
+      });
+    } else {
+      // It's a DM! Emit to the two specific users.
+      // Payload for DMs MUST include `recipientId` and `senderId` from your message creation service.
+      if (payload.senderId) {
+        this.server.to(`user:${payload.senderId}`).emit('channel:updated', {
+          channelId,
+          lastMessageId: messageId,
+        });
+      }
+
+      if (payload.recipientId) {
+        this.server.to(`user:${payload.recipientId}`).emit('channel:updated', {
+          channelId,
+          lastMessageId: messageId,
+        });
+      }
+    }
   }
 
   @OnEvent(AppEvents.MESSAGE_UPDATED)
@@ -220,7 +262,7 @@ export class RealtimeGateway
   @OnEvent(AppEvents.PRESENCE_UPDATED)
   handlePresenceUpdated(payload: Record<string, unknown>) {
     const userId = this.readString(payload, 'userId');
-    const rawStatus = this.readField(payload, 'status');
+    const rawStatus = payload.status;
     const status: PresenceStatus = this.isPresenceStatus(rawStatus)
       ? rawStatus
       : 'online';
@@ -246,48 +288,8 @@ export class RealtimeGateway
     );
   }
 
-  private async authenticate(client: Socket): Promise<JwtPayload | null> {
-    const token = this.extractToken(client);
-
-    if (!token) {
-      return null;
-    }
-
-    try {
-      return await this.jwtService.verifyAsync<JwtPayload>(token, {
-        secret: jwtConstants.secret,
-      });
-    } catch {
-      return null;
-    }
-  }
-
-  private extractToken(client: Socket): string | undefined {
-    const auth = client.handshake.auth as { token?: unknown } | undefined;
-    const authToken = auth?.token;
-    if (typeof authToken === 'string' && authToken.trim()) {
-      return authToken;
-    }
-
-    const header = client.handshake.headers.authorization;
-    if (typeof header === 'string') {
-      const [type, token] = header.split(' ');
-      if (type === 'Bearer' && token) {
-        return token;
-      }
-    }
-
-    const query = client.handshake.query as { token?: unknown };
-    const queryToken = query.token;
-    if (typeof queryToken === 'string' && queryToken.trim()) {
-      return queryToken;
-    }
-
-    return undefined;
-  }
-
-  private currentUserId(client: Socket): string {
-    return (client.data as SocketContext).user?.sub?.toString() ?? '';
+  private currentUserId(client: AuthenticatedSocket): string {
+    return client.data.user.id?.toString() ?? '';
   }
 
   private serverRoom(serverId: string): string {
@@ -310,12 +312,8 @@ export class RealtimeGateway
     this.server.to(this.channelRoom(channelId)).emit(event, payload);
   }
 
-  private readField(payload: Record<string, unknown>, field: string): unknown {
-    return payload[field];
-  }
-
   private readString(payload: Record<string, unknown>, field: string): string {
-    const value = this.readField(payload, field);
+    const value = payload[field];
     return typeof value === 'string' ? value : '';
   }
 

@@ -20,10 +20,7 @@ import { SignUpDto } from './dtos/SignUpDto';
 import { VerifyTfaDto } from './dtos/tfa.dto';
 import { AuthGoogleGuard } from './guards/auth-google.guard';
 import { LoggingService } from '../logging/logging.service';
-
-type AuthenticatedRequest = Request & {
-  user: { id: string; email: string; isTfaEnabled?: boolean };
-};
+import { type AuthenticatedRequest } from './types/authenticated-request.type';
 
 @Controller('auth')
 export class AuthController {
