@@ -3,18 +3,19 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
 import { Channel, ChannelType } from './entities/channel.entity';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { PermissionsService } from '../access-control/rbac/permissions.service';
 import { Permission } from '../access-control/rbac/permissions.constants';
 import { ChannelMember } from './entities/channel-member.entity';
+import { ReadState } from './entities/readState.entity';
 
 @Injectable()
 export class ChannelsService {
   constructor(
     @InjectRepository(Channel)
     private readonly channelsRepository: Repository<Channel>,
-    @InjectRepository(ChannelMember)
-    private readonly channelMemberssRepository: Repository<ChannelMember>,
+    @InjectRepository(ReadState)
+    private readonly readStatesRepository: Repository<ReadState>,
     private readonly permissionsService: PermissionsService,
     private readonly dataSource: DataSource,
   ) {}
@@ -26,36 +27,6 @@ export class ChannelsService {
 
   async findAll(): Promise<Channel[]> {
     return this.channelsRepository.find();
-  }
-
-  async findVisibleByServer(
-    serverId: string,
-    userId: string,
-  ): Promise<Channel[]> {
-    const channels = await this.channelsRepository.findBy({ serverId });
-
-    const visibility = await Promise.all(
-      channels.map(async (channel) => {
-        try {
-          const permissions = await this.permissionsService.resolveForChannel(
-            userId,
-            serverId,
-            channel.id,
-          );
-
-          return {
-            channel,
-            visible: permissions.has(Permission.ViewChannel),
-          };
-        } catch {
-          return { channel, visible: false };
-        }
-      }),
-    );
-
-    return visibility
-      .filter((entry) => entry.visible)
-      .map((entry) => entry.channel);
   }
 
   async findOne(id: string): Promise<Channel> {
@@ -134,5 +105,69 @@ export class ChannelsService {
 
       return savedChannel;
     });
+  }
+
+  async ackChannel(channelId: string, userId: string, messageId: string) {
+    let readState = await this.readStatesRepository.findOne({
+      where: { channelId, userId },
+    });
+
+    if (!readState) {
+      readState = this.readStatesRepository.create({
+        channelId,
+        userId,
+      });
+    }
+    readState.lastReadMessageId = messageId;
+    readState.lastReadAt = new Date();
+
+    return this.readStatesRepository.save(readState);
+  }
+
+  async findVisibleByServer(serverId: string, userId: string) {
+    const channels = await this.channelsRepository.findBy({ serverId });
+
+    // Pre-fetch all read states for this user in this server to avoid N+1 queries
+    const channelIds = channels.map((c) => c.id);
+    const readStates = await this.readStatesRepository.find({
+      where: { userId, channelId: In(channelIds) },
+    });
+    const readStateMap = new Map(readStates.map((rs) => [rs.channelId, rs]));
+
+    const visibilityAndUnread = await Promise.all(
+      channels.map(async (channel) => {
+        try {
+          const permissions = await this.permissionsService.resolveForChannel(
+            userId,
+            serverId,
+            channel.id,
+          );
+
+          const isVisible = permissions.has(Permission.ViewChannel);
+          if (!isVisible) return { channel, visible: false };
+
+          // 1. Get user's read state for this channel from our pre-fetched map
+          const readState = readStateMap.get(channel.id);
+
+          // 2. Determine unread status using the channel's lastMessageId
+          // If there is a last message, AND (they have no read state OR their read state doesn't match the last message)
+          // Note: This relies on string comparison of IDs, or assuming if they aren't equal, it's unread.
+          // For exact chronological comparisons you might still need the message dates, but ID equality is a fast heuristic.
+          const hasUnread =
+            channel.lastMessageId !== null &&
+            (!readState ||
+              readState.lastReadMessageId !== channel.lastMessageId);
+
+          // Return the channel with the computed unread property
+          return { channel: { ...channel, hasUnread }, visible: true };
+        } catch {
+          return { channel, visible: false };
+        }
+      }),
+    );
+
+    return visibilityAndUnread
+      .filter((entry) => entry.visible)
+      .map((entry) => entry.channel);
   }
 }
