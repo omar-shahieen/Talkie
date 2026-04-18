@@ -10,20 +10,20 @@ import { Channel } from '../../channels/entities/channel.entity';
 @Entity('messages')
 export class Message {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column('text')
-  content: string;
+  content!: string;
 
   @Column()
-  authorId: string;
+  authorId!: string;
 
   @Column()
-  channelId: string;
+  channelId!: string;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @ManyToOne(() => Channel)
-  channel: Channel;
+  channel!: Channel;
 }

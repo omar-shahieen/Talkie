@@ -1,3 +1,4 @@
+import { Server } from 'src/servers/entities/server.entity';
 import {
   Column,
   Entity,
@@ -6,22 +7,44 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { ChannelOverwrite } from './channel-overwrite.entity';
-import { Server } from '../../servers/entities/server.entity';
+import { ChannelMember } from './channel-member.entity';
+
+export enum ChannelType {
+  SERVER_TEXT = 'SERVER_TEXT',
+  SERVER_VOICE = 'SERVER_VOICE',
+  DM = 'DM',
+}
 
 @Entity('channels')
 export class Channel {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
-  @Column()
-  name: string;
+  @Column({
+    type: 'enum',
+    enum: ChannelType,
+    default: ChannelType.SERVER_TEXT,
+  })
+  type!: ChannelType;
 
-  @Column()
-  serverId: string;
+  // SERVER ONLY COLUMNS (Nullable for DMs)
+  @Column({ nullable: true })
+  name?: string; // DMs don't have a name
 
-  @ManyToOne(() => Server, (server) => server.channels)
-  server: Server;
+  @Column({ nullable: true })
+  serverId?: string;
+
+  @ManyToOne(() => Server, { nullable: true })
+  server?: Server;
 
   @OneToMany(() => ChannelOverwrite, (overwrite) => overwrite.channel)
-  overwrites: ChannelOverwrite[];
+  overwrites!: ChannelOverwrite[];
+
+  // DM ONLY COLUMNS (Will be empty for Servers)
+  @OneToMany(() => ChannelMember, (member) => member.channel)
+  dmMembers!: ChannelMember[]; // The 2 people in the DM
+
+  // SHARED COLUMNS
+  @Column({ nullable: true, default: null })
+  lastMessageId!: string | null; // For the "Bold" Unread feature
 }

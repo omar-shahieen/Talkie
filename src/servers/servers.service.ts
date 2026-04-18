@@ -49,7 +49,9 @@ export class ServersService {
       serverId: created.id,
       name: '@everyone',
       position: 0,
-      permissions: (Permission.ViewChannel | Permission.SendMessages).toString(),
+      permissions: (
+        Permission.ViewChannel | Permission.SendMessages
+      ).toString(),
       isEveryone: true,
     });
     const savedEveryoneRole = await this.rolesRepository.save(everyoneRole);
@@ -212,7 +214,9 @@ export class ServersService {
     return [...new Set(normalized)];
   }
 
-  private async resolveInviteCode(inviteCode: string | undefined): Promise<string> {
+  private async resolveInviteCode(
+    inviteCode: string | undefined,
+  ): Promise<string> {
     const requested = inviteCode?.trim();
     if (requested) {
       const existing = await this.serversRepository.findOneBy({
@@ -228,7 +232,6 @@ export class ServersService {
     // Retry until unique code is found.
     do {
       generated = randomBytes(4).toString('hex');
-      // eslint-disable-next-line no-await-in-loop
     } while (await this.serversRepository.findOneBy({ inviteCode: generated }));
 
     return generated;

@@ -12,16 +12,16 @@ import { Role } from '../../roles/entities/role.entity';
 @Entity('server_members')
 export class ServerMember {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  serverId: string;
+  serverId!: string;
 
   @Column()
-  userId: string;
+  userId!: string;
 
   @ManyToOne(() => Server, (server) => server.members)
-  server: Server;
+  server!: Server;
 
   @ManyToMany(() => Role)
   @JoinTable({
@@ -29,5 +29,5 @@ export class ServerMember {
     joinColumn: { name: 'memberId', referencedColumnName: 'id' },
     inverseJoinColumn: { name: 'roleId', referencedColumnName: 'id' },
   })
-  roles: Role[];
+  roles!: Role[];
 }

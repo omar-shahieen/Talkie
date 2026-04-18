@@ -6,10 +6,12 @@ import {
   Param,
   Patch,
   Post,
+  Req,
 } from '@nestjs/common';
 import { ChannelsService } from './channels.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
+import { type AuthenticatedRequest } from 'src/auth/types/authenticated-request.type';
 
 @Controller('channels')
 export class ChannelsController {
@@ -46,5 +48,14 @@ export class ChannelsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.channelsService.remove(id);
+  }
+
+  @Post('/:channelId/ack')
+  ackChannel(
+    @Param('channelId') channelId: string,
+    @Body('messageId') messageId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.channelsService.ackChannel(channelId, req.user.id, messageId);
   }
 }

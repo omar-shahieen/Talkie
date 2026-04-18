@@ -10,6 +10,10 @@ export class AuthJwtGuard extends PassportAuthGuard('jwt') {
   }
 
   canActivate(context: ExecutionContext) {
+    // Skip this guard for WebSockets entirely
+    if (context.getType() === 'ws') {
+      return true;
+    }
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),

@@ -1,6 +1,5 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { PermissionsService } from './rbac/permissions.service';
-import { PermissionsGuard } from './rbac/permissions.guard';
 import { RequirePermissions } from './rbac/require-permission.decorator';
 import { Permission } from './rbac/permissions.constants';
 @Controller('access-control')

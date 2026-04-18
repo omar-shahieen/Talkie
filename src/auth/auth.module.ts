@@ -11,6 +11,7 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthGoogleGuard } from './guards/auth-google.guard';
+import { RealtimeAuthGuard } from './guards/auth-realtime.guard';
 
 @Global()
 @Module({
@@ -46,7 +47,8 @@ import { AuthGoogleGuard } from './guards/auth-google.guard';
     LocalStrategy,
     JwtStrategy,
     GoogleStrategy,
+    RealtimeAuthGuard,
   ],
-  exports: [AuthJwtGuard, AuthService],
+  exports: [AuthJwtGuard, AuthService, RealtimeAuthGuard],
 })
 export class AuthModule {}

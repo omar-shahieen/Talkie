@@ -1,4 +1,4 @@
 export class CreateChannelDto {
-	name: string;
-	serverId: string;
+  name: string;
+  serverId: string;
 }
