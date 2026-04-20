@@ -83,6 +83,12 @@ export class User {
   @Column({ nullable: true, select: false })
   tfaSecret?: string;
 
+  @Column({ type: 'enum', enum: ['online', 'dnd'], nullable: true })
+  status_preference?: 'online' | 'dnd' | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  dnd_until?: Date | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 

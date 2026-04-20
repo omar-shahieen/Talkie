@@ -22,6 +22,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { AsyncContext } from './common/context/async-context.service';
 import { ContextMiddleware } from './common/middleware/context.middleware';
 import { NotificationsModule } from './notifications/notifications.module';
+import { PresenceService } from './presence/presence.service';
 
 @Module({
   imports: [
@@ -31,11 +32,9 @@ import { NotificationsModule } from './notifications/notifications.module';
     ),
     CacheModule.register({
       // cache
-      isGlobal: true,
+      // isGlobal: true,
       ttl: 5000, // in ms
     }),
-    ConfigModule.forRoot({ isGlobal: true }),
-    EventsModule,
     ConfigModule.forRoot({ isGlobal: true }),
     EventsModule,
 
@@ -86,6 +85,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
     AsyncContext,
+    PresenceService,
   ],
 })
 export class AppModule {

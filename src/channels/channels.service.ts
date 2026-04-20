@@ -170,4 +170,39 @@ export class ChannelsService {
       .filter((entry) => entry.visible)
       .map((entry) => entry.channel);
   }
+
+  async isDmMember(channelId: string, userId: string) {
+    const channel = await this.channelsRepository.findOne({
+      where: {
+        id: channelId,
+        dmMembers: { userId },
+      },
+      select: ['id'],
+    });
+
+    return channel && channel.type === ChannelType.DM ? true : false;
+  }
+  async isServerMember(channelId: string, userId: string) {
+    const channel = await this.channelsRepository.findOne({
+      where: {
+        id: channelId,
+      },
+      relations: ['dmMembers'],
+    });
+
+    if (!channel || channel.type === ChannelType.DM || !channel.serverId)
+      return false;
+
+    try {
+      // For Server channels: Evaluate their permission to view the channel
+      const permissions = await this.permissionsService.resolveForChannel(
+        userId,
+        channel.serverId,
+        channel.id,
+      );
+      return permissions.has(Permission.ViewChannel);
+    } catch {
+      return false;
+    }
+  }
 }

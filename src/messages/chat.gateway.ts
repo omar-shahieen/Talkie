@@ -1,5 +1,4 @@
 import { Injectable, UseGuards } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { OnEvent } from '@nestjs/event-emitter';
 
 import { AppEvents } from '../events/events.enum';
@@ -15,38 +14,21 @@ import {
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
+  WsException,
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
-import { Notification } from 'src/notifications/entities/notification.entity';
 import { type AuthenticatedSocket } from 'src/auth/types/authenticated-socket.type';
 
-type PresenceStatus = 'online' | 'idle' | 'dnd' | 'offline';
-
-interface ChannelRoomPayload {
-  serverId: string;
-  channelId: string;
-}
-
-interface TypingPayload extends ChannelRoomPayload {
-  isTyping?: boolean;
-}
-
-interface PresencePayload {
-  status: PresenceStatus;
-}
-
-interface MessageCreatedPayload {
-  id: string;
-  channelId: string;
-  content: string;
-  authorId: string;
-  createdAt: Date;
-
-  // These might be explicitly added by your MessageService before emitting
-  serverId?: string; // Will exist if it's a Server channel
-  senderId?: string; // Used for DMs
-  recipientId?: string; // Used for DMs
-}
+import { UsersService } from 'src/users/users.service';
+import type {
+  ChannelRoomPayload,
+  MessageCreatedPayload,
+  PresencePayload,
+  PresenceStatus,
+  TypingPayload,
+} from './chat.types';
+import { PresenceService } from 'src/presence/presence.service';
+import { ChannelsService } from 'src/channels/channels.service';
 
 @Injectable()
 @UseGuards(RealtimeAuthGuard)
@@ -59,31 +41,56 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server!: Server;
 
   constructor(
-    private readonly jwtService: JwtService,
     private readonly logger: LoggingService,
+    private readonly usersService: UsersService,
+    private readonly presenceService: PresenceService,
+    private readonly channelsService: ChannelsService,
   ) {
     this.logger.child({ context: ChatGateway.name });
   }
+  async handleConnection(client: AuthenticatedSocket) {
+    const userId = client.data.user.id;
+    void client.join(`user:${userId}`);
 
-  handleConnection(client: AuthenticatedSocket) {
-    const user = client.data.user;
+    try {
+      // 1. Get restored status BEFORE adding connection
+      const restoredStatus =
+        await this.presenceService.getRestoredStatus(userId);
 
-    client.emit('connection:ready', {
-      userId: user.id,
-      status: 'online',
-    });
+      // 2. Add connection with restored status
+      const wasOffline = await this.presenceService.addConnections(
+        userId,
+        client.id,
+        restoredStatus, // ← pass it in
+      );
 
-    void this.logger.log(`Socket connected: ${client.id} (${user.id})`);
+      if (wasOffline) {
+        await this.broadcastToSharedContexts(userId, restoredStatus);
+
+        // Tell the client what status was restored so UI can reflect it
+        client.emit('presence:restored', { status: restoredStatus });
+      }
+    } catch {
+      this.logger.error('Connection error');
+      client.disconnect();
+    }
   }
 
-  handleDisconnect(client: AuthenticatedSocket) {
+  async handleDisconnect(client: AuthenticatedSocket) {
     const userId = this.currentUserId(client);
 
-    if (userId) {
-      this.broadcastPresence(userId, 'offline', client);
-    }
+    void client.leave(`user:${userId}`);
+    const WentOffline = await this.presenceService.removeConnection(
+      userId,
+      client.id,
+    );
 
-    this.logger.log(`Socket disconnected: ${client.id}`);
+    this.logger.log(`client ${client.id} leave room for user : ${userId}`);
+
+    if (WentOffline) {
+      await this.broadcastToSharedContexts(userId, 'offline');
+      this.logger.log(` user : ${userId} go offline`);
+    }
   }
 
   @SubscribeMessage('server:join')
@@ -106,10 +113,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('channel:join')
   @RequirePermissions(Permission.ViewChannel)
-  joinChannel(
+  async joinChannel(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() payload: ChannelRoomPayload,
   ) {
+    const isMember = await this.channelsService.isServerMember(
+      payload.channelId,
+      client.data.user.id,
+    );
+    if (!isMember) {
+      throw new WsException('user is Forbidden to join this channel');
+    }
     void client.join(this.serverRoom(payload.serverId));
     void client.join(this.channelRoom(payload.channelId));
     return { event: 'channel:joined', ...payload };
@@ -125,12 +139,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('dm:join')
-  joinDM(
+  async joinDM(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() payload: { channelId: string }, // DMs are just channels now!
   ) {
-    // Before doing this, you'd usually query the DB to ensure this client.user.id
-    // actually exists in the ChannelMember table for this channelId.
+    const isMember = await this.channelsService.isDmMember(
+      payload.channelId,
+      client.data.user.id,
+    );
+    if (!isMember) {
+      throw new WsException('user is Forbidden to join this channel');
+    }
     void client.join(this.channelRoom(payload.channelId));
     return { event: 'dm:joined', channelId: payload.channelId };
   }
@@ -175,16 +194,51 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     return { event: 'typing:stopped', ...payload };
   }
-
   @SubscribeMessage('presence:set')
-  setPresence(
+  async setPresence(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() payload: PresencePayload,
+    @MessageBody() payload: PresencePayload, // { status, dnd_until? }
   ) {
     const userId = this.currentUserId(client);
-    this.broadcastPresence(userId, payload.status, client);
+
+    // 1. Get current effective status for transition check
+    const currentStatus = await this.presenceService.getEffectiveStatus(userId);
+
+    // 2. Validate the transition
+    if (
+      !this.presenceService.isValidTransition(currentStatus, payload.status)
+    ) {
+      throw new WsException(
+        `Invalid transition: ${currentStatus} → ${payload.status}`,
+      );
+    }
+
+    // 3. Update Redis
+    const isStatusUpdated = await this.presenceService.updateStatus(
+      userId,
+      client.id,
+      payload.status,
+    );
+
+    if (!isStatusUpdated) return;
+
+    // 4. Persist preference to DB (non-blocking)
+    void this.presenceService.saveStatusPreference(
+      userId,
+      payload.status,
+      payload.dnd_until,
+    );
+
+    // 5. Broadcast
+    await this.broadcastToSharedContexts(userId, payload.status);
 
     return { event: 'presence:updated', userId, status: payload.status };
+  }
+  @SubscribeMessage('presence:heartbeat')
+  async heartbeatRefresh(@ConnectedSocket() client: AuthenticatedSocket) {
+    const userId = this.currentUserId(client);
+
+    await this.presenceService.refreshHeartbeat(userId, client.id);
   }
 
   @OnEvent(AppEvents.MESSAGE_CREATED)
@@ -288,6 +342,20 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
   }
 
+  private async broadcastToSharedContexts(userId: string, status: string) {
+    // Fetch servers the user is in from DB
+    const serverIds = await this.usersService.getUserServerIds(userId);
+
+    // Emits  to Friends
+
+    // Emits  to shared servers.
+    for (const serverId of serverIds) {
+      this.server
+        .to(`server:${serverId}`)
+        .emit('presence:update', { userId, status });
+    }
+  }
+
   private currentUserId(client: AuthenticatedSocket): string {
     return client.data.user.id?.toString() ?? '';
   }
@@ -330,10 +398,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.server.to(room).emit('presence:update', payload);
         }
       }
-      return;
+    } else {
+      this.server.emit('presence:update', payload);
     }
-
-    this.server.emit('presence:update', payload);
   }
 
   private isPresenceStatus(value: unknown): value is PresenceStatus {
