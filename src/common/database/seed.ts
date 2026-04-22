@@ -5,9 +5,15 @@ import { User } from '../../users/entities/user.entity';
 import { Server } from '../../servers/entities/server.entity';
 import { Role } from '../../roles/entities/role.entity';
 import { ServerMember } from '../../users/entities/server-member.entity';
-import { Channel } from '../../channels/entities/channel.entity';
+import { Channel, ChannelType } from '../../channels/entities/channel.entity';
+import { ChannelMember } from '../../channels/entities/channel-member.entity';
 import { ChannelOverwrite } from '../../channels/entities/channel-overwrite.entity';
+import { ReadState } from '../../channels/entities/readState.entity';
 import { Message } from '../../messages/entities/message.entity';
+import {
+  Notification,
+  NotificationType,
+} from '../../notifications/entities/notification.entity';
 import { UserSubscriber } from '../../users/user.subscriber';
 
 // ---------------------------------------------------
@@ -26,8 +32,11 @@ const AppDataSource = new DataSource({
     Role,
     ServerMember,
     Channel,
+    ChannelMember,
     ChannelOverwrite,
+    ReadState,
     Message,
+    Notification,
   ],
   subscribers: [UserSubscriber], // 👈 this is what was missing
   synchronize: true,
@@ -45,8 +54,11 @@ async function seed() {
   const roleRepo = AppDataSource.getRepository(Role);
   const memberRepo = AppDataSource.getRepository(ServerMember);
   const channelRepo = AppDataSource.getRepository(Channel);
+  const channelMemberRepo = AppDataSource.getRepository(ChannelMember);
   const overwriteRepo = AppDataSource.getRepository(ChannelOverwrite);
+  const readStateRepo = AppDataSource.getRepository(ReadState);
   const messageRepo = AppDataSource.getRepository(Message);
+  const notificationRepo = AppDataSource.getRepository(Notification);
 
   // ---------------------------------------------------
   // 1. Users
@@ -74,6 +86,18 @@ async function seed() {
     serverRepo.create({
       name: `${owner.username}'s Gaming Hub`,
       ownerId: String(owner.id),
+      inviteCode: faker.string.alphanumeric(8),
+      description: faker.lorem.sentence(),
+      category: faker.helpers.arrayElement([
+        'gaming',
+        'study',
+        'music',
+        'tech',
+      ]),
+      tags: faker.helpers.arrayElements(
+        ['pvp', 'co-op', 'chill', 'competitive', 'casual'],
+        2,
+      ),
     }),
   );
 
@@ -121,9 +145,31 @@ async function seed() {
   // ---------------------------------------------------
   console.log('💬 Seeding Channels...');
   const [generalChannel, adminChannel] = await channelRepo.save([
-    channelRepo.create({ name: 'general', serverId: server.id }),
-    channelRepo.create({ name: 'admin-secret', serverId: server.id }),
+    channelRepo.create({
+      name: 'general',
+      serverId: server.id,
+      type: ChannelType.SERVER_TEXT,
+    }),
+    channelRepo.create({
+      name: 'admin-secret',
+      serverId: server.id,
+      type: ChannelType.SERVER_TEXT,
+    }),
   ]);
+
+  const dmUsers = [users[1], users[2]];
+  const dmChannel = await channelRepo.save(
+    channelRepo.create({ type: ChannelType.DM }),
+  );
+
+  await channelMemberRepo.save(
+    dmUsers.map((user) =>
+      channelMemberRepo.create({
+        channelId: dmChannel.id,
+        userId: String(user.id),
+      }),
+    ),
+  );
 
   // ---------------------------------------------------
   // 6. Channel Overwrites
@@ -150,7 +196,7 @@ async function seed() {
   // 7. Messages
   // ---------------------------------------------------
   console.log('📝 Seeding Messages...');
-  await messageRepo.save(
+  const generalMessages = await messageRepo.save(
     Array.from({ length: 20 }, () => {
       const randomUser = users[Math.floor(Math.random() * users.length)];
       return messageRepo.create({
@@ -160,6 +206,77 @@ async function seed() {
       });
     }),
   );
+
+  const dmMessages = await messageRepo.save(
+    Array.from({ length: 8 }, () => {
+      const randomUser = dmUsers[Math.floor(Math.random() * dmUsers.length)];
+      return messageRepo.create({
+        content: faker.lorem.sentence(),
+        authorId: String(randomUser.id),
+        channelId: dmChannel.id,
+      });
+    }),
+  );
+
+  await channelRepo.save([
+    channelRepo.create({
+      id: generalChannel.id,
+      lastMessageId: generalMessages.at(-1)?.id ?? null,
+    }),
+    channelRepo.create({
+      id: dmChannel.id,
+      lastMessageId: dmMessages.at(-1)?.id ?? null,
+    }),
+  ]);
+
+  // ---------------------------------------------------
+  // 8. Read States
+  // ---------------------------------------------------
+  console.log('👀 Seeding Read States...');
+  await readStateRepo.save(
+    users.map((user) =>
+      readStateRepo.create({
+        userId: String(user.id),
+        channelId: generalChannel.id,
+        lastReadMessageId: generalMessages.at(-1)?.id ?? undefined,
+      }),
+    ),
+  );
+
+  await readStateRepo.save(
+    dmUsers.map((user) =>
+      readStateRepo.create({
+        userId: String(user.id),
+        channelId: dmChannel.id,
+        lastReadMessageId: dmMessages.at(-1)?.id ?? undefined,
+      }),
+    ),
+  );
+
+  // ---------------------------------------------------
+  // 9. Notifications
+  // ---------------------------------------------------
+  console.log('🔔 Seeding Notifications...');
+  await notificationRepo.save([
+    notificationRepo.create({
+      recipientId: String(users[3].id),
+      senderId: String(users[0].id),
+      serverId: server.id,
+      channelId: generalChannel.id,
+      content: 'You were mentioned in #general',
+      link: `/channels/${server.id}/${generalChannel.id}`,
+      type: NotificationType.MENTION,
+      isRead: false,
+    }),
+    notificationRepo.create({
+      recipientId: String(users[4].id),
+      senderId: String(users[1].id),
+      content: 'New message request',
+      link: `/channels/@me/${dmChannel.id}`,
+      type: NotificationType.DM,
+      isRead: true,
+    }),
+  ]);
 
   console.log('✅ Database seeded successfully!');
   await AppDataSource.destroy();

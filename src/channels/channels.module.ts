@@ -20,5 +20,6 @@ import { ReadState } from './entities/readState.entity';
   ],
   controllers: [ChannelsController],
   providers: [ChannelsService],
+  exports: [ChannelsService],
 })
 export class ChannelsModule {}

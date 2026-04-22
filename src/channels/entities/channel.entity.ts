@@ -31,7 +31,7 @@ export class Channel {
   @Column({ nullable: true })
   name?: string; // DMs don't have a name
 
-  @Column({ nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   serverId?: string;
 
   @ManyToOne(() => Server, { nullable: true })
@@ -45,6 +45,6 @@ export class Channel {
   dmMembers!: ChannelMember[]; // The 2 people in the DM
 
   // SHARED COLUMNS
-  @Column({ nullable: true, default: null })
-  lastMessageId!: string | null; // For the "Bold" Unread feature
+  @Column({ type: 'uuid', nullable: true, default: null })
+  lastMessageId?: string | null; // For the "Bold" Unread feature
 }

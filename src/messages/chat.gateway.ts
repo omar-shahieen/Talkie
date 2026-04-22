@@ -1,8 +1,8 @@
-import { Injectable, UseGuards } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 
 import { AppEvents } from '../events/events.enum';
-import { RealtimeAuthGuard } from '../auth/guards/auth-realtime.guard';
+import { SocketAuthMiddleware } from 'src/auth/middleware/socket-auth.middleware';
 import { RequirePermissions } from '../access-control/rbac/require-permission.decorator';
 import { Permission } from '../access-control/rbac/permissions.constants';
 import { LoggingService } from 'src/logging/logging.service';
@@ -11,6 +11,7 @@ import {
   MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
@@ -31,25 +32,39 @@ import { PresenceService } from 'src/presence/presence.service';
 import { ChannelsService } from 'src/channels/channels.service';
 
 @Injectable()
-@UseGuards(RealtimeAuthGuard)
 @WebSocketGateway({
   namespace: 'chat',
   cors: { origin: true, credentials: true },
 })
-export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ChatGateway
+  implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit
+{
   @WebSocketServer()
   server!: Server;
 
   constructor(
     private readonly logger: LoggingService,
+    private readonly socketAuthMiddleware: SocketAuthMiddleware,
     private readonly usersService: UsersService,
     private readonly presenceService: PresenceService,
     private readonly channelsService: ChannelsService,
   ) {
     this.logger.child({ context: ChatGateway.name });
   }
+  afterInit(server: Server) {
+    server.use((socket, next) => {
+      this.socketAuthMiddleware.use(socket, next);
+    });
+  }
   async handleConnection(client: AuthenticatedSocket) {
-    const userId = client.data.user.id;
+    const userId = client.data?.user?.id;
+
+    if (!userId) {
+      this.logger.warn(`Unauthorized WS connection (Client ID: ${client.id})`);
+      client.disconnect();
+      return;
+    }
+
     void client.join(`user:${userId}`);
 
     try {

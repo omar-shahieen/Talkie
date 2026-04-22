@@ -12,6 +12,7 @@ import { GoogleStrategy } from './strategies/google.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthGoogleGuard } from './guards/auth-google.guard';
 import { RealtimeAuthGuard } from './guards/auth-realtime.guard';
+import { SocketAuthMiddleware } from './middleware/socket-auth.middleware';
 
 @Global()
 @Module({
@@ -48,7 +49,14 @@ import { RealtimeAuthGuard } from './guards/auth-realtime.guard';
     JwtStrategy,
     GoogleStrategy,
     RealtimeAuthGuard,
+    SocketAuthMiddleware,
   ],
-  exports: [AuthJwtGuard, AuthService, RealtimeAuthGuard],
+  exports: [
+    AuthJwtGuard,
+    AuthService,
+    RealtimeAuthGuard,
+    SocketAuthMiddleware,
+    JwtModule,
+  ],
 })
 export class AuthModule {}

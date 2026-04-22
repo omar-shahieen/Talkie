@@ -13,8 +13,8 @@ export class ChannelMember {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column() channelId!: string;
-  @Column() userId!: string;
+  @Column({ type: 'uuid' }) channelId!: string;
+  @Column({ type: 'uuid' }) userId!: string;
 
   @ManyToOne(() => Channel, (channel) => channel.dmMembers, {
     onDelete: 'CASCADE',

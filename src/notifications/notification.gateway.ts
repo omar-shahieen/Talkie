@@ -2,24 +2,35 @@ import { OnEvent } from '@nestjs/event-emitter';
 import {
   OnGatewayConnection,
   OnGatewayDisconnect,
+  OnGatewayInit,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
+import { SocketAuthMiddleware } from 'src/auth/middleware/socket-auth.middleware';
 import { AuthenticatedSocket } from 'src/auth/types/authenticated-socket.type';
 import { LoggingService } from 'src/logging/logging.service';
 import { type NotificationDto } from './dtos/notification.dto';
 
 @WebSocketGateway({ namespace: 'notifications' })
 export class NotificationsGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
+  implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit
 {
-  constructor(private readonly logger: LoggingService) {
+  constructor(
+    private readonly logger: LoggingService,
+    private readonly socketAuthMiddleware: SocketAuthMiddleware,
+  ) {
     this.logger.child({ context: NotificationsGateway.name });
   }
 
   @WebSocketServer()
   server!: Server;
+
+  afterInit(server: Server) {
+    server.use((socket, next) => {
+      this.socketAuthMiddleware.use(socket, next);
+    });
+  }
 
   handleConnection(client: AuthenticatedSocket) {
     const userId = client.data.user.id;

@@ -12,10 +12,10 @@ export class ChannelOverwrite {
   @ManyToOne(() => Channel, (channel) => channel.overwrites)
   channel!: Channel;
 
-  @Column()
+  @Column({ type: 'uuid' })
   targetId!: string; // Can be a Role UUID or a User UUID
 
-  @Column({ type: 'varchar', length: 10 })
+  @Column({ enum: ['role', 'user'], type: 'enum' })
   targetType!: 'role' | 'user';
 
   @Column({ type: 'varchar', length: 20, default: '0' })
