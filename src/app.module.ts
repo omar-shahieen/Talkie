@@ -22,6 +22,8 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { AsyncContext } from './common/context/async-context.service';
 import { ContextMiddleware } from './common/middleware/context.middleware';
 import { NotificationsModule } from './notifications/notifications.module';
+import { PresenceModule } from './presence/presence.module';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
@@ -31,11 +33,9 @@ import { NotificationsModule } from './notifications/notifications.module';
     ),
     CacheModule.register({
       // cache
-      isGlobal: true,
+      // isGlobal: true,
       ttl: 5000, // in ms
     }),
-    ConfigModule.forRoot({ isGlobal: true }),
-    EventsModule,
     ConfigModule.forRoot({ isGlobal: true }),
     EventsModule,
 
@@ -60,6 +60,30 @@ import { NotificationsModule } from './notifications/notifications.module';
       }),
     }),
 
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        connection: {
+          host: configService.get<string>('REDIS_HOST'),
+          port: configService.get<number>('REDIS_PORT'),
+          username: configService.get<string>('REDIS_USERNAME', 'default'),
+          password: configService.get<string>('REDIS_PASSWORD'),
+        },
+        defaultJobOptions: {
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+          },
+          removeOnComplete: 300,
+          removeOnFail: 300,
+        },
+      }),
+    }),
+
+    BullModule.registerQueue({
+      name: 'mail',
+    }),
     // GLOBAL MODULES
     AuthModule,
     AccessControlModule,
@@ -75,6 +99,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     ServersModule,
     MessagesModule,
     NotificationsModule,
+    PresenceModule,
   ],
   controllers: [AppController],
   providers: [

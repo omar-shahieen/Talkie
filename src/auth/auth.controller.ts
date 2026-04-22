@@ -178,9 +178,10 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const authHeader = req.headers.authorization;
-    const tfaLoginToken = authHeader?.startsWith('Bearer ')
-      ? authHeader.split(' ')[1]
-      : '';
+    const tfaLoginToken =
+      typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
+        ? authHeader.slice('Bearer '.length)
+        : '';
 
     if (!tfaLoginToken) {
       throw new UnauthorizedException('Missing TFA login token');

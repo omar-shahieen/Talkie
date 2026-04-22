@@ -1,4 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 export enum NotificationType {
   DM = 'DM',
@@ -21,9 +26,9 @@ export class Notification {
   @Column({ type: 'uuid', nullable: true })
   channelId?: string;
 
-  @Column({ type: 'varchar' })
+  @Column()
   content!: string;
-  @Column({ type: 'varchar' })
+  @Column()
   link!: string;
 
   @Column({
@@ -34,6 +39,7 @@ export class Notification {
 
   @Column({ default: false, type: 'boolean' })
   isRead!: boolean;
-  @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
+
+  @CreateDateColumn()
   createdAt!: Date;
 }

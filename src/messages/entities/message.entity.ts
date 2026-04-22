@@ -15,10 +15,10 @@ export class Message {
   @Column('text')
   content!: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   authorId!: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   channelId!: string;
 
   @CreateDateColumn()

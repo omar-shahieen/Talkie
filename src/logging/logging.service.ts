@@ -6,7 +6,7 @@ type LogLevel = 'error' | 'warn' | 'info' | 'http' | 'debug';
 
 @Injectable()
 export class LoggingService implements NestLoggerService {
-  private readonly logger: winston.Logger;
+  private logger: winston.Logger;
 
   constructor() {
     const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -98,7 +98,7 @@ export class LoggingService implements NestLoggerService {
     return { write: (message: string) => this.logger.http(message.trim()) };
   }
 
-  child(defaultMeta: Record<string, unknown>): winston.Logger {
-    return this.logger.child(defaultMeta);
+  child(defaultMeta: Record<string, unknown>) {
+    this.logger = this.logger.child(defaultMeta);
   }
 }

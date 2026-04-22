@@ -26,8 +26,9 @@ export class Server {
   @Column('simple-array', { nullable: true })
   tags?: string[];
 
+  // Assigns a random UUID for any existing rows in the DB so migration doesn't crash
   @Column({ unique: true })
-  inviteCode!: string;
+  inviteCode?: string;
 
   @OneToMany(() => Role, (role) => role.server)
   roles!: Role[];

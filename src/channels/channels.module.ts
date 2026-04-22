@@ -7,7 +7,6 @@ import { ChannelOverwrite } from './entities/channel-overwrite.entity';
 import { AccessControlModule } from '../access-control/access-control.module';
 import { ChannelMember } from './entities/channel-member.entity';
 import { ReadState } from './entities/readState.entity';
-import { Message } from 'src/messages/entities/message.entity';
 
 @Module({
   imports: [
@@ -21,5 +20,6 @@ import { Message } from 'src/messages/entities/message.entity';
   ],
   controllers: [ChannelsController],
   providers: [ChannelsService],
+  exports: [ChannelsService],
 })
 export class ChannelsModule {}

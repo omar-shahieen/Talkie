@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { LoggingService } from '../logging/logging.service';
+import { ServerMember } from './entities/server-member.entity';
 
 type UserHiddenField =
   | 'password'
@@ -22,6 +23,8 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @InjectRepository(ServerMember)
+    private userMemberRepository: Repository<ServerMember>,
     private readonly logger: LoggingService,
   ) {}
 
@@ -166,6 +169,38 @@ export class UsersService {
     return this.usersRepository.findOneByOrFail({ currentJwtToken: jwtToken });
   }
 
+  async getUserServerIds(userId: string) {
+    const servermembers = await this.userMemberRepository.find({
+      select: ['serverId'], // Only fetch this single column
+      where: {
+        userId,
+      },
+    });
+
+    return servermembers.map((sm) => sm.serverId);
+  }
+
+  async findOne(id: string): Promise<User> {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new NotFoundException(`User #${id} not found`);
+    }
+    return user;
+  }
+
+  async updateStatusPreference(
+    userId: string,
+    data: { status_preference: 'dnd'; dnd_until: Date | null },
+  ) {
+    await this.usersRepository.update(userId, data);
+  }
+
+  async clearStatusPreference(userId: string) {
+    await this.usersRepository.update(userId, {
+      status_preference: null,
+      dnd_until: null,
+    });
+  }
   async remove(id: number): Promise<void> {
     try {
       const deleteResult = await this.usersRepository.delete(id);

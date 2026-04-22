@@ -1,9 +1,16 @@
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity('read_states')
 export class ReadState {
-  @Column() userId!: string;
-  @Column() channelId!: string;
-  @Column() lastReadMessageId!: string; // The ID of the latest message they saw
-  @Column() lastReadAt!: Date;
+  @PrimaryColumn({ type: 'uuid' })
+  userId!: string;
+
+  @PrimaryColumn({ type: 'uuid' })
+  channelId!: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  lastReadMessageId!: string;
+
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  lastReadAt!: Date;
 }

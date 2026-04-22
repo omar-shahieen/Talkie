@@ -14,10 +14,10 @@ export class ServerMember {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   serverId!: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   userId!: string;
 
   @ManyToOne(() => Server, (server) => server.members)

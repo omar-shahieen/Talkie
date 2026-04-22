@@ -19,7 +19,7 @@ import { Role } from 'src/roles/entities/role.entity';
       useClass: PermissionsGuard,
     },
   ],
-  exports: [PermissionsService, PermissionsGuard],
+  exports: [PermissionsService],
   imports: [
     TypeOrmModule.forFeature([
       ServerMember,
