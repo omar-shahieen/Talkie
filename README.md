@@ -1,102 +1,285 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Discord Backend API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A production-oriented Discord-like backend built with NestJS and TypeScript.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+It supports:
 
-## Description
+- Advanced authentication (JWT + refresh cookie + Google OAuth + 2FA)
+- RBAC-based authorization at server and channel scope
+- Server, channel, role, and membership management
+- Full messaging domain (messages, replies, threads, reactions, search)
+- Local file upload for messages with security filtering and image compression
+- Realtime communication via Socket.IO (chat, notifications, presence, typing)
+- Event-driven notifications
+- Mail queue with worker processing
+- Scheduled cleanup jobs (cron)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 1. Tech Stack
 
-## Project setup
+- NestJS 11
+- TypeScript
+- PostgreSQL + TypeORM (primary data store)
+- MongoDB + Mongoose (audit data)
+- Redis (presence and queue runtime)
+- BullMQ (background jobs)
+- Socket.IO (WebSocket)
+- Elasticsearch (optional, for search)
+- Multer + Sharp (upload and image processing)
+
+## 2. High-Level Architecture
+
+- HTTP Layer: Nest controllers and services
+- Realtime Layer: Socket.IO gateways with dedicated namespaces
+- Internal Event Bus: event-emitter driven domain events
+- Persistence:
+  - PostgreSQL for core entities
+  - MongoDB for audit logs
+  - Redis for presence/cache/queue runtime data
+
+## 3. Core Modules
+
+- AuthModule
+  - Local auth, JWT, refresh flow, Google OAuth, 2FA
+- AccessControlModule
+  - Permission resolution with guards/decorators
+- ServersModule
+  - Server creation, discovery, invite-based join, leave/remove
+- ChannelsModule
+  - Server channels + DMs, visibility rules, read acknowledgements
+- MessagesModule
+  - Messaging APIs, reactions, threads/replies, search, uploads
+- NotificationsModule
+  - Mention/DM notifications and read-state management
+- PresenceModule
+  - Online state, heartbeat, status restoration
+- MailModule
+  - Queued email sending with worker and queue events
+- AuditModule
+  - Audit stream and persistence in MongoDB
+- LoggingModule
+  - Structured logging and HTTP request logging
+
+## 4. Runtime Features
+
+### 4.1 Authentication and Security
+
+- JWT guard is globally enabled by default
+- Public endpoints are explicitly marked via decorator
+- Refresh token is stored as `jwt_refresh` cookie
+- Google OAuth callback supports frontend redirection
+- 2FA flow:
+  - initiate
+  - enable
+  - disable
+  - verify
+
+### 4.2 Messaging and Attachments
+
+- Create/update/delete messages
+- Add/remove reactions
+- Reply and thread navigation
+- Search behavior:
+  - Elasticsearch if `ELASTICSEARCH_NODE` is configured
+  - PostgreSQL fallback query otherwise
+- Upload endpoint behavior:
+  - Stores files locally in `uploads/messages`
+  - Blocks dangerous extensions (for example `exe`, `js`, `bat`, `ps1`)
+  - Compresses images to WebP
+  - Validates channel membership before accepting upload
+
+### 4.3 Message Deletion and Retention
+
+- User-initiated message deletion is hard delete
+- Automated retention job:
+  - Runs daily at midnight
+  - Hard-deletes messages older than 7 days
+  - Recomputes `lastMessageId` for impacted channels
+
+### 4.4 Realtime (Socket.IO)
+
+- `chat` namespace events:
+  - `server:join` / `server:leave`
+  - `channel:join` / `channel:leave`
+  - `dm:join` / `dm:leave`
+  - `typing:start` / `typing:stop`
+  - `presence:set` / `presence:heartbeat`
+  - Broadcasts message, reaction, typing, and presence updates
+- `notifications` namespace:
+  - User-room based push delivery
+  - `notification:recieved`
+  - `notification:cleared`
+
+## 5. REST API Summary
+
+### 5.1 Auth
+
+- POST `/auth/signup`
+- POST `/auth/login`
+- POST `/auth/refresh`
+- POST `/auth/logout`
+- GET `/auth/profile`
+- GET `/auth/google`
+- GET `/auth/google/callback`
+- POST `/auth/tfa/initiate`
+- POST `/auth/tfa/enable`
+- POST `/auth/tfa/disable`
+- POST `/auth/tfa/verify`
+
+### 5.2 Servers
+
+- POST `/servers`
+- GET `/servers`
+- GET `/servers/mine/:userId`
+- GET `/servers/discovery/public`
+- POST `/servers/join`
+- DELETE `/servers/:id/leave/:userId`
+- GET `/servers/:id`
+- PATCH `/servers/:id`
+- DELETE `/servers/:id?requesterId=...`
+
+### 5.3 Channels
+
+- POST `/channels`
+- GET `/channels`
+- GET `/channels/server/:serverId/visible/:userId`
+- GET `/channels/:id`
+- PATCH `/channels/:id`
+- DELETE `/channels/:id`
+- POST `/channels/:channelId/ack`
+
+### 5.4 Messages
+
+- POST `/messages/upload`
+- POST `/messages`
+- PATCH `/messages/:id`
+- DELETE `/messages/:id`
+- GET `/messages/channel/:channelId`
+- GET `/messages/:id/replies`
+- GET `/messages/:id/thread`
+- POST `/messages/:id/reactions`
+- DELETE `/messages/:id/reactions`
+- GET `/messages/search/query`
+
+### 5.5 Roles
+
+- POST `/roles`
+- GET `/roles`
+- GET `/roles/:id`
+- PATCH `/roles/:id`
+- DELETE `/roles/:id`
+
+### 5.6 Notifications
+
+- GET `/notifications`
+- PATCH `/notifications/:id/read`
+
+### 5.7 Access Control
+
+- GET `/access-control/resolve`
+
+## 6. Environment Variables
+
+### 6.1 Core
+
+- `NODE_ENV`
+- `PORT`
+- `APP_NAME`
+
+### 6.2 PostgreSQL
+
+- `DB_HOST`
+- `DB_PORT`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `DB_NAME`
+- `DB_SYNC`
+
+### 6.3 MongoDB
+
+- `MONGO_URI`
+
+### 6.4 Redis / Queue
+
+- `REDIS_HOST`
+- `REDIS_PORT`
+- `REDIS_USERNAME`
+- `REDIS_PASSWORD`
+
+### 6.5 Auth
+
+- `JWT_SECRET`
+- `FRONTEND_OAUTH_REDIRECT_URL`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_CALLBACK_URL`
+
+### 6.6 Mail
+
+- `MAIL_FROM`
+- `DEV_MAIL_HOST`
+- `DEV_MAIL_PORT`
+- `DEV_MAIL_USER`
+- `DEV_MAIL_PASS`
+- `PROD_MAIL_HOST`
+- `PROD_MAIL_PORT`
+- `PROD_MAIL_USER`
+- `PROD_MAIL_PASS`
+
+### 6.7 Search
+
+- `ELASTICSEARCH_NODE` (optional)
+
+## 7. Local Setup
+
+Install dependencies:
 
 ```bash
-$ npm install
+npm install
 ```
 
-## Compile and run the project
+Run required infrastructure locally:
+
+- PostgreSQL
+- MongoDB
+- Redis
+
+Start the application:
 
 ```bash
 # development
-$ npm run start
+npm run start:dev
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+# production build
+npm run build
+npm run start:prod
 ```
 
-## Run tests
+## 8. Useful Scripts
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm run build
+npm run lint
+npm run test
+npm run test:e2e
+npm run seed
 ```
 
-## Deployment
+## 9. Uploads and Static Files
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+- Uploaded files are stored under `uploads/messages`
+- Static serving is exposed under `/uploads/*`
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## 10. Contributor Notes
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+- A large part of the system is event-driven (messages, notifications, realtime updates)
+- Follow the existing module pattern: Controller -> Service -> Repository
+- Permission-related changes should be validated with AccessControlModule behavior
+- Message lifecycle changes should account for:
+  - notification side effects
+  - websocket broadcasts
+  - search sync
+  - retention job behavior
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## 11. License
 
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-
-## Maintenance Note
-
-This README update is non-functional and does not affect runtime behavior.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+UNLICENSED

@@ -11,6 +11,7 @@ import { Channel } from '../channels/entities/channel.entity';
 import { MessageAttachment } from './entities/message-attachment.entity';
 import { MessageReaction } from './entities/message-reaction.entity';
 import { ChannelMember } from '../channels/entities/channel-member.entity';
+import { ServerMember } from '../users/entities/server-member.entity';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ChannelMember } from '../channels/entities/channel-member.entity';
       Message,
       Channel,
       ChannelMember,
+      ServerMember,
       MessageAttachment,
       MessageReaction,
     ]),

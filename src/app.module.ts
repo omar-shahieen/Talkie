@@ -24,6 +24,8 @@ import { ContextMiddleware } from './common/middleware/context.middleware';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PresenceModule } from './presence/presence.module';
 import { BullModule } from '@nestjs/bullmq';
+import { DevModule } from './dev/dev.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -36,6 +38,7 @@ import { BullModule } from '@nestjs/bullmq';
       // isGlobal: true,
       ttl: 5000, // in ms
     }),
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true }),
     EventsModule,
 
@@ -100,6 +103,7 @@ import { BullModule } from '@nestjs/bullmq';
     MessagesModule,
     NotificationsModule,
     PresenceModule,
+    DevModule,
   ],
   controllers: [AppController],
   providers: [

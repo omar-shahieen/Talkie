@@ -4,13 +4,15 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, LessThan, Repository } from 'typeorm';
 import { Message } from './entities/message.entity';
 import { Channel, ChannelType } from '../channels/entities/channel.entity';
 import { MessageAttachment } from './entities/message-attachment.entity';
 import { MessageReaction } from './entities/message-reaction.entity';
 import { ChannelMember } from '../channels/entities/channel-member.entity';
+import { ServerMember } from '../users/entities/server-member.entity';
 import { CreateMessageDto } from './dtos/create-message.dto';
 import { UpdateMessageDto } from './dtos/update-message.dto';
 import { MessagePaginationDto } from './dtos/pagination.dto';
@@ -33,6 +35,8 @@ export class MessagesService {
     private readonly channelsRepository: Repository<Channel>,
     @InjectRepository(ChannelMember)
     private readonly channelMembersRepository: Repository<ChannelMember>,
+    @InjectRepository(ServerMember)
+    private readonly serverMembersRepository: Repository<ServerMember>,
     @InjectRepository(MessageAttachment)
     private readonly attachmentsRepository: Repository<MessageAttachment>,
     @InjectRepository(MessageReaction)
@@ -102,6 +106,39 @@ export class MessagesService {
     return created;
   }
 
+  async assertCanUploadToChannel(
+    channelId: string,
+    userId: string,
+  ): Promise<void> {
+    const channel = await this.channelsRepository.findOneBy({ id: channelId });
+    if (!channel) {
+      throw new NotFoundException('Channel not found');
+    }
+
+    if (channel.type === ChannelType.DM) {
+      const dmMember = await this.channelMembersRepository.findOneBy({
+        channelId,
+        userId,
+      });
+      if (!dmMember) {
+        throw new ForbiddenException('You are not a member of this DM channel');
+      }
+      return;
+    }
+
+    if (!channel.serverId) {
+      throw new BadRequestException('Server channel is missing serverId');
+    }
+
+    const serverMember = await this.serverMembersRepository.findOneBy({
+      serverId: channel.serverId,
+      userId,
+    });
+    if (!serverMember) {
+      throw new ForbiddenException('You are not a member of this server');
+    }
+  }
+
   async update(id: string, dto: UpdateMessageDto, requesterId: string) {
     const message = await this.messagesRepository.findOneBy({ id });
     if (!message || message.isDeleted) {
@@ -136,7 +173,7 @@ export class MessagesService {
 
   async remove(id: string, requesterId: string) {
     const message = await this.messagesRepository.findOneBy({ id });
-    if (!message || message.isDeleted) {
+    if (!message) {
       throw new NotFoundException('Message not found');
     }
 
@@ -144,21 +181,50 @@ export class MessagesService {
       throw new ForbiddenException('Only the author can delete this message');
     }
 
-    message.isDeleted = true;
-    message.deletedAt = new Date();
-    message.content = '[deleted]';
-
-    const saved = await this.messagesRepository.save(message);
+    await this.messagesRepository.delete({ id: message.id });
+    await this.refreshChannelLastMessage(message.channelId);
 
     this.eventBus.emit(AppEvents.MESSAGE_DELETED, {
-      id: saved.id,
-      channelId: saved.channelId,
-      deletedAt: saved.deletedAt,
+      id: message.id,
+      channelId: message.channelId,
+      deletedAt: new Date(),
     });
 
-    void this.deleteMessageFromElastic(saved.id);
+    void this.deleteMessageFromElastic(message.id);
 
-    return { success: true };
+    return { success: true, hardDeleted: true };
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async purgeMessagesOlderThanSevenDays() {
+    const now = Date.now();
+    const cutoff = new Date(now - 7 * 24 * 60 * 60 * 1000);
+
+    const oldMessages = await this.messagesRepository.find({
+      select: ['id', 'channelId'],
+      where: { createdAt: LessThan(cutoff) },
+    });
+
+    if (!oldMessages.length) {
+      return;
+    }
+
+    const ids = oldMessages.map((message) => message.id);
+    const channelIds = [
+      ...new Set(oldMessages.map((message) => message.channelId)),
+    ];
+
+    await this.messagesRepository.delete(ids);
+
+    await Promise.all(ids.map((id) => this.deleteMessageFromElastic(id)));
+    await Promise.all(
+      channelIds.map((channelId) => this.refreshChannelLastMessage(channelId)),
+    );
+
+    this.logger.log(
+      `Hard-deleted ${ids.length} messages older than 7 days`,
+      MessagesService.name,
+    );
   }
 
   async listChannelMessages(channelId: string, query: MessagePaginationDto) {
@@ -564,5 +630,18 @@ export class MessagesService {
         MessagesService.name,
       );
     }
+  }
+
+  private async refreshChannelLastMessage(channelId: string) {
+    const lastMessage = await this.messagesRepository.findOne({
+      where: { channelId, isDeleted: false },
+      order: { createdAt: 'DESC', id: 'DESC' },
+      select: ['id'],
+    });
+
+    await this.channelsRepository.update(
+      { id: channelId },
+      { lastMessageId: lastMessage?.id ?? null },
+    );
   }
 }

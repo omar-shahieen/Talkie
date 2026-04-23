@@ -4,9 +4,19 @@ import { LoggingService } from './logging/logging.service';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
+import express from 'express';
+import { existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.enableCors({ origin: true, credentials: true });
+
+  const uploadsDir = join(process.cwd(), 'uploads');
+  if (!existsSync(uploadsDir)) {
+    mkdirSync(uploadsDir, { recursive: true });
+  }
+  app.use('/uploads', express.static(uploadsDir));
+
   // replace winston logger with NestJS LoggerService
   const logger = app.get(LoggingService);
   app.useLogger(logger);
