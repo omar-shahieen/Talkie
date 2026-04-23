@@ -15,7 +15,7 @@ import { ServerMember } from '../users/entities/server-member.entity';
 import { BullModule } from '@nestjs/bullmq';
 import {
   MessageRetentionConsumer,
-  MessageRetentionQueueScheduler,
+  MessageRetentionQueueService,
 } from './message-retention.queue';
 
 @Module({
@@ -40,7 +40,7 @@ import {
     ChatGateway,
     MessagesService,
     MessageRetentionConsumer,
-    MessageRetentionQueueScheduler,
+    MessageRetentionQueueService,
   ],
   exports: [MessagesService],
 })

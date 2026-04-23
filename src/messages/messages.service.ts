@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, LessThan, Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Message } from './entities/message.entity';
 import { Channel, ChannelType } from '../channels/entities/channel.entity';
 import { MessageAttachment } from './entities/message-attachment.entity';
@@ -20,6 +20,7 @@ import { SearchMessagesDto } from './dtos/search-messages.dto';
 import { AppEvents } from '../events/events.enum';
 import { EventBusService } from '../events/event-bus.service';
 import { LoggingService } from '../logging/logging.service';
+import { MessageRetentionQueueService } from './message-retention.queue';
 
 interface ElasticHit {
   _id: string;
@@ -43,6 +44,7 @@ export class MessagesService {
     private readonly dataSource: DataSource,
     private readonly eventBus: EventBusService,
     private readonly logger: LoggingService,
+    private readonly messageRetentionQueue: MessageRetentionQueueService,
   ) {
     this.logger.child({ context: MessagesService.name });
   }
@@ -180,47 +182,43 @@ export class MessagesService {
       throw new ForbiddenException('Only the author can delete this message');
     }
 
-    await this.messagesRepository.delete({ id: message.id });
+    if (message.isDeleted) {
+      return { success: true, softDeleted: true, hardDeleteQueued: true };
+    }
+
+    message.isDeleted = true;
+    message.deletedAt = new Date();
+    await this.messagesRepository.save(message);
     await this.refreshChannelLastMessage(message.channelId);
+    await this.messageRetentionQueue.enqueueHardDelete(message.id);
 
     this.eventBus.emit(AppEvents.MESSAGE_DELETED, {
       id: message.id,
       channelId: message.channelId,
-      deletedAt: new Date(),
+      deletedAt: message.deletedAt,
     });
 
     void this.deleteMessageFromElastic(message.id);
 
-    return { success: true, hardDeleted: true };
+    return { success: true, softDeleted: true, hardDeleteQueued: true };
   }
 
-  async purgeMessagesOlderThanSevenDays() {
-    const now = Date.now();
-    const cutoff = new Date(now - 7 * 24 * 60 * 60 * 1000);
-
-    const oldMessages = await this.messagesRepository.find({
-      select: ['id', 'channelId'],
-      where: { createdAt: LessThan(cutoff) },
+  async hardDeleteSoftDeletedMessage(messageId: string) {
+    const message = await this.messagesRepository.findOne({
+      where: { id: messageId },
+      select: ['id', 'channelId', 'isDeleted'],
     });
 
-    if (!oldMessages.length) {
+    if (!message || !message.isDeleted) {
       return;
     }
 
-    const ids = oldMessages.map((message) => message.id);
-    const channelIds = [
-      ...new Set(oldMessages.map((message) => message.channelId)),
-    ];
-
-    await this.messagesRepository.delete(ids);
-
-    await Promise.all(ids.map((id) => this.deleteMessageFromElastic(id)));
-    await Promise.all(
-      channelIds.map((channelId) => this.refreshChannelLastMessage(channelId)),
-    );
+    await this.messagesRepository.delete({ id: message.id });
+    await this.refreshChannelLastMessage(message.channelId);
+    await this.deleteMessageFromElastic(message.id);
 
     this.logger.log(
-      `Hard-deleted ${ids.length} messages older than 7 days`,
+      `Hard-deleted soft-deleted message ${message.id}`,
       MessagesService.name,
     );
   }
