@@ -12,9 +12,17 @@ import { MessageAttachment } from './entities/message-attachment.entity';
 import { MessageReaction } from './entities/message-reaction.entity';
 import { ChannelMember } from '../channels/entities/channel-member.entity';
 import { ServerMember } from '../users/entities/server-member.entity';
+import { BullModule } from '@nestjs/bullmq';
+import {
+  MessageRetentionConsumer,
+  MessageRetentionQueueScheduler,
+} from './message-retention.queue';
 
 @Module({
   imports: [
+    BullModule.registerQueue({
+      name: 'message-retention',
+    }),
     TypeOrmModule.forFeature([
       Message,
       Channel,
@@ -28,7 +36,12 @@ import { ServerMember } from '../users/entities/server-member.entity';
     UsersModule,
   ],
   controllers: [MessagesController],
-  providers: [ChatGateway, MessagesService],
+  providers: [
+    ChatGateway,
+    MessagesService,
+    MessageRetentionConsumer,
+    MessageRetentionQueueScheduler,
+  ],
   exports: [MessagesService],
 })
 export class MessagesModule {}

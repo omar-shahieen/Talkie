@@ -4,7 +4,6 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, LessThan, Repository } from 'typeorm';
 import { Message } from './entities/message.entity';
@@ -195,7 +194,6 @@ export class MessagesService {
     return { success: true, hardDeleted: true };
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async purgeMessagesOlderThanSevenDays() {
     const now = Date.now();
     const cutoff = new Date(now - 7 * 24 * 60 * 60 * 1000);

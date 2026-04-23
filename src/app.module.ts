@@ -25,7 +25,6 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { PresenceModule } from './presence/presence.module';
 import { BullModule } from '@nestjs/bullmq';
 import { DevModule } from './dev/dev.module';
-import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -38,7 +37,6 @@ import { ScheduleModule } from '@nestjs/schedule';
       // isGlobal: true,
       ttl: 5000, // in ms
     }),
-    ScheduleModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true }),
     EventsModule,
 
