@@ -29,10 +29,7 @@ import { ResetPasswordDto } from './dtos/resetPassword.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-    private readonly logger: LoggingService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   @Public()
   @HttpCode(HttpStatus.OK)
@@ -43,17 +40,10 @@ export class AuthController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    console.log(_signInDto);
-    if (req.user.isTfaEnabled) {
-      const tfaLoginToken = await this.authService.createTfaLoginToken(
-        req.user.id,
-        req.user.email,
-      );
 
       return { tfaRequired: true, tfaLoginToken };
     }
 
-    console.log(req.user);
     const { access_token, refresh_token } = await this.authService.signIn(
       req.user.id,
       req.user.email,

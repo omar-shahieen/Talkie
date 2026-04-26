@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Notification, NotificationType } from './entities/notification.entity';
 import { AppEvents } from 'src/events/events.enum';
 import { OnEvent } from '@nestjs/event-emitter';
-import { EventBusService } from 'src/events/event-bus.service';
+import { EventBusService } from 'src/events/eventBus.service';
 import { LoggingService } from 'src/logging/logging.service';
 import { type MessageSendDto } from './dtos/messageSend.dto';
 

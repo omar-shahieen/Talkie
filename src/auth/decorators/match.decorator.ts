@@ -11,7 +11,6 @@ export class MatchConstraint implements ValidatorConstraintInterface {
   validate(value: any, args: ValidationArguments): boolean {
     const [relatedPropertyName] = args.constraints;
     const relatedValue = (args.object as any)[relatedPropertyName];
-    console.log(value, relatedValue);
     // The core logic: they must  be equal
     return value === relatedValue;
   }

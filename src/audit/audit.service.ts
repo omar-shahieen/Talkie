@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AppEvents } from '../events/events.enum';
-import { AuditLog } from './audit-log.entity';
+import { AuditLog } from './auditLog.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 

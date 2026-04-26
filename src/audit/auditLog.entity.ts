@@ -8,6 +8,6 @@ export class AuditLog {
   @Column()
   action!: string;
 
-  @Column()
+  @Column({ type: 'jsonb' })
   payload!: Record<string, unknown>;
 }

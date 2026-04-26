@@ -13,7 +13,7 @@ import { SignUpDto } from './dtos/SignUpDto';
 import { ConfigService } from '@nestjs/config';
 import * as authenticator from 'otplib';
 import { LoggingService } from '../logging/logging.service';
-import { EventBusService } from '../events/event-bus.service';
+import { EventBusService } from '../events/eventBus.service';
 import { AppEvents } from '../events/events.enum';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -36,7 +36,6 @@ export class AuthService {
 
   private redactEmail(email: string): string {
     // masking emails to prevent email leakage
-    console.log(email);
     const [name, domain] = email.split('@');
     if (!name || !domain) return 'unknown';
     const maskedName =
@@ -110,7 +109,6 @@ export class AuthService {
 
     await this.usersRepository.save(user);
 
-    console.log(user);
     this.logger.log(
       `Auth login succeeded for email=${this.redactEmail(email)}`,
       AuthService.name,

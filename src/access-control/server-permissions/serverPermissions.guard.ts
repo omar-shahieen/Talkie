@@ -8,7 +8,7 @@ import {
 import { Reflector } from '@nestjs/core';
 
 import { LoggingService } from '../../logging/logging.service';
-import { EventBusService } from '../../events/event-bus.service';
+import { EventBusService } from '../../events/eventBus.service';
 import { AppEvents } from '../../events/events.enum';
 import { Request } from 'express';
 import { PERMISSION_SERVER_KEY } from './requireServerPermission.decorator';

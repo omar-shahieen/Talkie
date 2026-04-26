@@ -212,7 +212,6 @@ export class ServersService {
 
     // generate invite code and invitaion record
     const inviteCode = randomBytes(8).toString('hex'); // 16 chars
-    console.log(inviteCode);
 
     let expirationDate: null | Date = null;
     if (expiresInHours) {

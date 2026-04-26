@@ -2,7 +2,7 @@ import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
 import { LoggingService } from '../../logging/logging.service';
-import { EventBusService } from '../../events/event-bus.service';
+import { EventBusService } from '../../events/eventBus.service';
 
 import { AppPermissionsService } from './appPermissions.service';
 import { AppRole } from 'src/users/entities/user.entity';
@@ -26,7 +26,7 @@ export class AppPermissionsGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     );
 
-    if (!requiredPermissions.length) {
+    if (!requiredPermissions?.length) {
       return true;
     }
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
