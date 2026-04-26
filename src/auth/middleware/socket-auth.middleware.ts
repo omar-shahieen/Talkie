@@ -31,7 +31,7 @@ export class SocketAuthMiddleware {
         secret: jwtConstants.secret,
       });
 
-      socket.data.user = { id: payload.sub, email: payload.username };
+      socket.data.user = { id: payload.sub, email: payload.email };
       next();
     } catch {
       next(new Error('Unauthorized'));

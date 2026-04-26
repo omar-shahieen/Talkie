@@ -5,4 +5,4 @@ export const jwtConstants = {
   tfa_expires_in: '5m' as const,
 };
 
-export type JwtPayload = { sub: string; username: string; tfa?: boolean };
+export type JwtPayload = { sub: string; email: string; tfa?: boolean };

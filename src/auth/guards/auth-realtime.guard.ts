@@ -36,7 +36,7 @@ export class RealtimeAuthGuard implements CanActivate {
         secret: jwtConstants.secret,
       });
 
-      client.data.user = { id: payload.sub, email: payload.username };
+      client.data.user = { id: payload.sub, email: payload.email };
       this.logger.log(
         `WS Client ${clientId} authenticated successfully for User ID: ${payload.sub || 'unknown'}`,
       );

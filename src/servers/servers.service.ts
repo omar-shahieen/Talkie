@@ -4,19 +4,21 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { CreateServerDto } from './dto/create-server.dto';
 import { UpdateServerDto } from './dto/update-server.dto';
 import { Server } from './entities/server.entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { ServerMember } from '../users/entities/server-member.entity';
 import { Role } from '../roles/entities/role.entity';
 import { Channel } from '../channels/entities/channel.entity';
 import { Permission } from '../access-control/rbac/permissions.constants';
-import { JoinServerDto } from './dto/join-server.dto';
 import { DiscoverServersDto } from './dto/discover-servers.dto';
 import { randomBytes } from 'crypto';
-
+import { InvitationDto } from './dto/invititaion.dto';
+import { PermissionsBitfield } from 'src/access-control/rbac/permissions.bitfield';
+import { ConfigService } from '@nestjs/config';
+import { Invitation } from './entities/invitation.entity';
 @Injectable()
 export class ServersService {
   constructor(
@@ -28,10 +30,13 @@ export class ServersService {
     private readonly rolesRepository: Repository<Role>,
     @InjectRepository(Channel)
     private readonly channelsRepository: Repository<Channel>,
+    @InjectRepository(Invitation)
+    private readonly invitationsRepository: Repository<Invitation>,
+    @InjectDataSource() private dataSource: DataSource,
+    private readonly configService: ConfigService,
   ) {}
 
   async create(createServerDto: CreateServerDto): Promise<Server> {
-    const inviteCode = await this.resolveInviteCode(createServerDto.inviteCode);
     const tags = this.normalizeTags(createServerDto.tags);
 
     const server = this.serversRepository.create({
@@ -41,7 +46,6 @@ export class ServersService {
       description: createServerDto.description,
       category: createServerDto.category,
       tags,
-      inviteCode,
     });
     const created = await this.serversRepository.save(server);
 
@@ -58,7 +62,7 @@ export class ServersService {
 
     const ownerMember = this.membersRepository.create({
       serverId: created.id,
-      userId: created.ownerId,
+      memberId: created.ownerId,
       roles: [savedEveryoneRole],
     });
     await this.membersRepository.save(ownerMember);
@@ -78,7 +82,7 @@ export class ServersService {
 
   async findForUser(userId: string): Promise<Server[]> {
     const memberships = await this.membersRepository.find({
-      where: { userId },
+      where: { memberId: userId },
       relations: ['server'],
     });
 
@@ -142,38 +146,6 @@ export class ServersService {
     return this.serversRepository.save(server);
   }
 
-  async joinByInvite(payload: JoinServerDto): Promise<ServerMember> {
-    const inviteCode = payload.inviteCode.trim();
-    if (!inviteCode) {
-      throw new BadRequestException('Invite code is required');
-    }
-
-    const server = await this.serversRepository.findOneBy({ inviteCode });
-    if (!server) {
-      throw new NotFoundException('Invite code is invalid');
-    }
-
-    const existingMember = await this.membersRepository.findOneBy({
-      serverId: server.id,
-      userId: payload.userId,
-    });
-    if (existingMember) {
-      throw new BadRequestException('User is already a member');
-    }
-
-    const everyoneRole = await this.rolesRepository.findOneBy({
-      serverId: server.id,
-      isEveryone: true,
-    });
-
-    const member = this.membersRepository.create({
-      serverId: server.id,
-      userId: payload.userId,
-      roles: everyoneRole ? [everyoneRole] : [],
-    });
-    return this.membersRepository.save(member);
-  }
-
   async leaveServer(serverId: string, userId: string): Promise<void> {
     const server = await this.findOne(serverId);
     if (server.ownerId === userId) {
@@ -182,7 +154,10 @@ export class ServersService {
       );
     }
 
-    const member = await this.membersRepository.findOneBy({ serverId, userId });
+    const member = await this.membersRepository.findOneBy({
+      serverId,
+      memberId: userId,
+    });
     if (!member) {
       throw new NotFoundException('Server member not found');
     }
@@ -214,26 +189,145 @@ export class ServersService {
     return [...new Set(normalized)];
   }
 
-  private async resolveInviteCode(
-    inviteCode: string | undefined,
-  ): Promise<string> {
-    const requested = inviteCode?.trim();
-    if (requested) {
-      const existing = await this.serversRepository.findOneBy({
-        inviteCode: requested,
-      });
-      if (existing) {
-        throw new BadRequestException('Invite code is already used');
-      }
-      return requested;
+  async createInviation(
+    inviterId: string,
+    serverId: string,
+    { expiresInHours, maxUses }: InvitationDto,
+  ) {
+    // find the server
+    const server = await this.serversRepository.findOne({
+      where: { id: serverId },
+    });
+    if (!server) {
+      throw new NotFoundException('server does not exist');
     }
 
-    let generated = '';
-    // Retry until unique code is found.
-    do {
-      generated = randomBytes(4).toString('hex');
-    } while (await this.serversRepository.findOneBy({ inviteCode: generated }));
+    // check if the user is servermember
+    const member = await this.membersRepository.findOne({
+      where: { serverId, memberId: inviterId },
+      relations: ['roles'],
+    });
 
-    return generated;
+    if (!member) {
+      throw new NotFoundException('member does not exist');
+    }
+
+    // check if user has admin privilage
+
+    const isAdmin = member.roles.some(
+      (role) =>
+        !role.isEveryone &&
+        PermissionsBitfield.from(role.permissions).has(
+          Permission.Administrator,
+        ),
+    );
+    if (!isAdmin) {
+      throw new ForbiddenException(
+        'user has no permission to generate invitation',
+      );
+    }
+
+    // generate invite code and invitaion record
+    const inviteCode = randomBytes(4).toString('hex'); // 8 chars
+    console.log(inviteCode); // e.g., "f3a2b1c0"
+
+    let expirationDate: null | Date = null;
+    if (expiresInHours) {
+      expirationDate = new Date();
+
+      // Add hours (converted to milliseconds)
+      expirationDate.setTime(
+        expirationDate.getTime() + expiresInHours * 60 * 60 * 1000,
+      );
+    }
+
+    const invitaion = this.invitationsRepository.create({
+      inviteCode,
+      expiresAt: expirationDate,
+      maxUses,
+      serverId,
+      inviterId,
+    });
+
+    await this.invitationsRepository.save(invitaion);
+
+    // build frontend url
+
+    const frontendUrl = `${this.configService.get<string>('FRONTEND_END_URL')}/invite/${inviteCode}`;
+
+    return frontendUrl;
+  }
+
+  async resolveInvitationCode(inviteCode: string) {
+    const invite = await this.invitationsRepository.findOne({
+      where: { inviteCode },
+      relations: ['server'],
+    });
+
+    if (!invite) {
+      throw new NotFoundException('invite code does not exist');
+    }
+
+    this.validateInvite(invite);
+
+    const memberCount = await this.membersRepository.count({
+      where: { serverId: invite.serverId },
+    });
+
+    return {
+      icon: invite.server.icon,
+      name: invite.server.name,
+      memberCount: memberCount,
+    };
+  }
+
+  private validateInvite(invite: Invitation): void {
+    if (invite.expiresAt && invite.expiresAt <= new Date()) {
+      throw new ForbiddenException('invite code expired');
+    }
+    if (invite.maxUses && invite.maxUses <= invite.currentUses) {
+      throw new ForbiddenException('invite code uses limit is reached');
+    }
+  }
+
+  async acceptInviationCode(userId: string, inviteCode: string) {
+    await this.dataSource.transaction(async (manager) => {
+      const invite = await manager.findOne(Invitation, {
+        where: { inviteCode },
+        relations: ['server', 'server.members', 'server.roles'],
+        lock: { mode: 'pessimistic_write' }, // This row is now locked for others
+      });
+
+      if (!invite) {
+        throw new NotFoundException('invite code does not exist');
+      }
+
+      this.validateInvite(invite);
+
+      const existingMember = invite.server.members.filter(
+        (m) => userId === m.memberId,
+      )[0];
+      if (existingMember) {
+        throw new BadRequestException('User is already a member');
+      }
+
+      const everyoneRole = invite.server.roles.filter(
+        (role) => role.isEveryone,
+      );
+
+      const member = manager.create(ServerMember, {
+        serverId: invite.server.id,
+        memberId: userId,
+        roles: everyoneRole ?? [],
+      });
+
+      await manager.save(member);
+
+      invite.currentUses += 1;
+
+      await manager.save(invite);
+    });
+
+    return { message: 'user added' };
   }
 }

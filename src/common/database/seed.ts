@@ -72,7 +72,6 @@ async function seed() {
         email: faker.internet.email(),
         username: faker.internet.username(),
         password: 'password123',
-        isActive: true,
       }),
     ),
   );

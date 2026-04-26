@@ -4,8 +4,9 @@ import { MailService } from './mail.service';
 import { join } from 'path';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/adapters/handlebars.adapter';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { MailConsumer } from './mail.worker';
-import { MailQueueEvents } from './mail.listner';
+import { MailWorker } from './mail.worker';
+import { MailQueueListener } from './mail.listner';
+import { BullModule } from '@nestjs/bullmq';
 
 @Global()
 @Module({
@@ -50,7 +51,12 @@ import { MailQueueEvents } from './mail.listner';
         };
       },
     }),
+
+    // task queue
+    BullModule.registerQueue({
+      name: 'mailQueue',
+    }),
   ],
-  providers: [MailService, MailConsumer, MailQueueEvents],
+  providers: [MailService, MailWorker, MailQueueListener],
 })
 export class MailModule {}

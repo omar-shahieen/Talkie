@@ -1,26 +1,33 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Server } from '../../servers/entities/server.entity';
 
 @Entity('roles')
 export class Role {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  name: string;
+  name!: string;
 
   @Column({ type: 'int', default: 0 })
-  position: number;
+  position!: number;
 
   @Column({ type: 'varchar', length: 20, default: '0' })
-  permissions: string; // The base bitfield
+  permissions!: string; // The base bitfield
 
   @Column({ default: false })
-  isEveryone: boolean;
+  isEveryone!: boolean;
 
   @Column()
-  serverId: string;
+  serverId!: string;
 
   @ManyToOne(() => Server, (server) => server.roles)
-  server: Server;
+  @JoinColumn({ name: 'serverId' })
+  server!: Server;
 }

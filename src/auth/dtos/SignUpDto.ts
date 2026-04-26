@@ -1,4 +1,6 @@
 import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { Exclude } from 'class-transformer';
+import { Match } from '../decorators/match.decorator';
 
 export class SignUpDto {
   @IsString()
@@ -6,7 +8,7 @@ export class SignUpDto {
 
   @IsOptional()
   @IsString()
-  lastName!: string;
+  lastName?: string;
 
   @IsEmail()
   email!: string;
@@ -17,5 +19,11 @@ export class SignUpDto {
 
   @IsString()
   @MinLength(8)
+  @Exclude({ toPlainOnly: true }) // Excludes it when transforming to a plain object
   password!: string;
+
+  @IsString()
+  @Match('password')
+  @Exclude()
+  passwordConfirm!: string;
 }

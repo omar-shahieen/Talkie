@@ -4,6 +4,7 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
@@ -33,9 +34,6 @@ export class User {
   @Column({ nullable: true, select: false, unique: true })
   currentJwtToken?: string;
 
-  @Column({ default: true })
-  isActive!: boolean;
-
   @Column({ default: false })
   isTfaEnabled!: boolean;
 
@@ -53,6 +51,9 @@ export class User {
 
   @UpdateDateColumn()
   updatedAt!: Date;
+
+  @DeleteDateColumn()
+  deletedAt!: Date; // This will store the deletion timestamp
 
   async comparePassword(plain: string): Promise<boolean> {
     if (!this.password) return false;
