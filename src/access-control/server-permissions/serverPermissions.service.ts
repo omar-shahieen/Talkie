@@ -1,17 +1,16 @@
-// src/permissions/permissions.service.ts
 import { Injectable } from '@nestjs/common';
 import { PermissionsBitfield } from './permissions.bitfield';
-import { Permission } from './permissions.constants';
+import { Permission } from './serverPermissions.constants';
 
 import { InjectRepository } from '@nestjs/typeorm';
-import { ServerMember } from '../../users/entities/server-member.entity';
+import { ServerMember } from '../../servers/entities/server-member.entity';
 import { Server } from '../../servers/entities/server.entity';
 import { Repository } from 'typeorm';
 import { ChannelOverwrite } from '../../channels/entities/channel-overwrite.entity';
 import { LoggingService } from '../../logging/logging.service';
 
 @Injectable()
-export class PermissionsService {
+export class ServerPermissionsService {
   constructor(
     @InjectRepository(ChannelOverwrite)
     private readonly channelOverwritesRepository: Repository<ChannelOverwrite>,
@@ -20,16 +19,18 @@ export class PermissionsService {
     @InjectRepository(ServerMember)
     private readonly memberRepository: Repository<ServerMember>,
     private readonly logger: LoggingService,
-  ) {}
+  ) {
+    this.logger.child({ context: ServerPermissionsService.name });
+  }
   async resolveForChannel(
     userId: string,
     serverId: string,
-    channelId: string,
+    channelId?: string,
   ): Promise<PermissionsBitfield> {
     this.logger.debug(
-      `Resolving permissions for userId=${userId} serverId=${serverId} channelId=${channelId}`,
-      PermissionsService.name,
+      `Resolving app permissions for userId=${userId} serverId=${serverId} channelId=${channelId}`,
     );
+
     const server = await this.serverRepository.findOneByOrFail({
       id: serverId,
     });
@@ -41,7 +42,7 @@ export class PermissionsService {
     const member = await this.memberRepository.findOneOrFail({
       where: {
         serverId,
-        userId,
+        memberId: userId,
       },
       relations: ['roles'],
     });
@@ -56,7 +57,9 @@ export class PermissionsService {
     if (perms.has(Permission.Administrator)) {
       return PermissionsBitfield.from(~0n);
     }
-
+    if (!channelId) {
+      return perms;
+    }
     const overwrites = await this.channelOverwritesRepository.find({
       where: {
         channelId,
@@ -84,7 +87,6 @@ export class PermissionsService {
 
     this.logger.debug(
       `Resolved permissions for userId=${userId} channelId=${channelId} bitfield=${perms.toJSON()}`,
-      PermissionsService.name,
     );
 
     return perms;

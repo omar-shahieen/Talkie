@@ -8,6 +8,10 @@ import {
 } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
+export enum AppRole {
+  USER = 'user',
+  ADMIN = 'admin',
+}
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -46,6 +50,8 @@ export class User {
   @Column({ type: 'timestamp', nullable: true })
   dnd_until?: Date | null;
 
+  @Column({ type: 'enum', enum: AppRole, default: AppRole.USER, select: false })
+  appRole!: AppRole;
   @CreateDateColumn()
   createdAt!: Date;
 

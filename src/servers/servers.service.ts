@@ -4,21 +4,20 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
 import { CreateServerDto } from './dto/create-server.dto';
 import { UpdateServerDto } from './dto/update-server.dto';
 import { Server } from './entities/server.entity';
-import { DataSource, Repository } from 'typeorm';
-import { ServerMember } from '../users/entities/server-member.entity';
+import { Repository } from 'typeorm';
+import { ServerMember } from './entities/server-member.entity';
 import { Role } from '../roles/entities/role.entity';
 import { Channel } from '../channels/entities/channel.entity';
-import { Permission } from '../access-control/rbac/permissions.constants';
+import { Permission } from '../access-control/server-permissions/serverPermissions.constants';
 import { DiscoverServersDto } from './dto/discover-servers.dto';
 import { randomBytes } from 'crypto';
-import { InvitationDto } from './dto/invititaion.dto';
-import { PermissionsBitfield } from 'src/access-control/rbac/permissions.bitfield';
 import { ConfigService } from '@nestjs/config';
-import { Invitation } from './entities/invitation.entity';
+import { Invitation } from '../invitations/entities/invitation.entity';
+import { CreateInvitationDto } from './dto/create-invititaion.dto';
 @Injectable()
 export class ServersService {
   constructor(
@@ -32,7 +31,6 @@ export class ServersService {
     private readonly channelsRepository: Repository<Channel>,
     @InjectRepository(Invitation)
     private readonly invitationsRepository: Repository<Invitation>,
-    @InjectDataSource() private dataSource: DataSource,
     private readonly configService: ConfigService,
   ) {}
 
@@ -192,7 +190,7 @@ export class ServersService {
   async createInviation(
     inviterId: string,
     serverId: string,
-    { expiresInHours, maxUses }: InvitationDto,
+    { expiresInHours, maxUses }: CreateInvitationDto,
   ) {
     // find the server
     const server = await this.serversRepository.findOne({
@@ -212,24 +210,9 @@ export class ServersService {
       throw new NotFoundException('member does not exist');
     }
 
-    // check if user has admin privilage
-
-    const isAdmin = member.roles.some(
-      (role) =>
-        !role.isEveryone &&
-        PermissionsBitfield.from(role.permissions).has(
-          Permission.Administrator,
-        ),
-    );
-    if (!isAdmin) {
-      throw new ForbiddenException(
-        'user has no permission to generate invitation',
-      );
-    }
-
     // generate invite code and invitaion record
-    const inviteCode = randomBytes(4).toString('hex'); // 8 chars
-    console.log(inviteCode); // e.g., "f3a2b1c0"
+    const inviteCode = randomBytes(8).toString('hex'); // 16 chars
+    console.log(inviteCode);
 
     let expirationDate: null | Date = null;
     if (expiresInHours) {
@@ -258,76 +241,19 @@ export class ServersService {
     return frontendUrl;
   }
 
-  async resolveInvitationCode(inviteCode: string) {
-    const invite = await this.invitationsRepository.findOne({
-      where: { inviteCode },
-      relations: ['server'],
+  async findUserInvitations(userId: string, serverId: string) {
+    const member = await this.membersRepository.findOneBy({
+      memberId: userId,
+      serverId,
     });
-
-    if (!invite) {
-      throw new NotFoundException('invite code does not exist');
+    if (!member) {
+      throw new ForbiddenException('user is not member of this server');
     }
-
-    this.validateInvite(invite);
-
-    const memberCount = await this.membersRepository.count({
-      where: { serverId: invite.serverId },
+    return this.invitationsRepository.find({
+      where: { inviterId: userId, serverId },
+      order: {
+        createdAt: 'DESC', // Newest first
+      },
     });
-
-    return {
-      icon: invite.server.icon,
-      name: invite.server.name,
-      memberCount: memberCount,
-    };
-  }
-
-  private validateInvite(invite: Invitation): void {
-    if (invite.expiresAt && invite.expiresAt <= new Date()) {
-      throw new ForbiddenException('invite code expired');
-    }
-    if (invite.maxUses && invite.maxUses <= invite.currentUses) {
-      throw new ForbiddenException('invite code uses limit is reached');
-    }
-  }
-
-  async acceptInviationCode(userId: string, inviteCode: string) {
-    await this.dataSource.transaction(async (manager) => {
-      const invite = await manager.findOne(Invitation, {
-        where: { inviteCode },
-        relations: ['server', 'server.members', 'server.roles'],
-        lock: { mode: 'pessimistic_write' }, // This row is now locked for others
-      });
-
-      if (!invite) {
-        throw new NotFoundException('invite code does not exist');
-      }
-
-      this.validateInvite(invite);
-
-      const existingMember = invite.server.members.filter(
-        (m) => userId === m.memberId,
-      )[0];
-      if (existingMember) {
-        throw new BadRequestException('User is already a member');
-      }
-
-      const everyoneRole = invite.server.roles.filter(
-        (role) => role.isEveryone,
-      );
-
-      const member = manager.create(ServerMember, {
-        serverId: invite.server.id,
-        memberId: userId,
-        roles: everyoneRole ?? [],
-      });
-
-      await manager.save(member);
-
-      invite.currentUses += 1;
-
-      await manager.save(invite);
-    });
-
-    return { message: 'user added' };
   }
 }

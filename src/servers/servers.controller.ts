@@ -13,8 +13,10 @@ import { ServersService } from './servers.service';
 import { CreateServerDto } from './dto/create-server.dto';
 import { UpdateServerDto } from './dto/update-server.dto';
 import { DiscoverServersDto } from './dto/discover-servers.dto';
-import { InvitationDto } from './dto/invititaion.dto';
-import { type AuthenticatedRequest } from 'src/auth/types/authenticated-request.type';
+import { CreateInvitationDto } from './dto/create-invititaion.dto';
+import { type AuthenticatedRequest } from '../auth/types/authenticated-request.type';
+import { Permission } from '../access-control/server-permissions/serverPermissions.constants';
+import { RequireServerPermissions } from 'src/access-control/server-permissions/requireServerPermission.decorator';
 
 @Controller('servers')
 export class ServersController {
@@ -60,24 +62,22 @@ export class ServersController {
     return this.serversService.remove(id, requesterId);
   }
 
-  @Post('/:id/invite')
+  @Post('/:serverId/invitation')
+  @RequireServerPermissions(Permission.Administrator)
   async craeteInvitation(
-    @Body() payload: InvitationDto,
+    @Body() payload: CreateInvitationDto,
     @Req() req: AuthenticatedRequest,
-    @Param('id') serverId: string,
+    @Param('serverId') serverId: string,
   ) {
     return this.serversService.createInviation(req.user.id, serverId, payload);
   }
 
-  @Get('/invites/:inviteCode')
-  async findInvitation(@Param('inviteCode') inviteCode: string) {
-    return this.serversService.resolveInvitationCode(inviteCode);
-  }
-  @Post('/invites/:inviteCode/accept')
-  async acceptInvitationCode(
+  @Get('/:serverId/invitation')
+  @RequireServerPermissions(Permission.Administrator)
+  async findUserInvitations(
     @Req() req: AuthenticatedRequest,
-    @Param('inviteCode') inviteCode: string,
+    @Param('serverId') serverId: string,
   ) {
-    return this.serversService.resolveInvitationCode(inviteCode);
+    return this.serversService.findUserInvitations(req.user.id, serverId);
   }
 }

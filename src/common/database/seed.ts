@@ -1,30 +1,63 @@
-import { DataSource } from 'typeorm';
-import { faker } from '@faker-js/faker';
+import 'reflect-metadata';
 
-import { User } from '../../users/entities/user.entity';
-import { Server } from '../../servers/entities/server.entity';
-import { Role } from '../../roles/entities/role.entity';
-import { ServerMember } from '../../users/entities/server-member.entity';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { faker } from '@faker-js/faker';
+import { DataSource } from 'typeorm';
+
 import { Channel, ChannelType } from '../../channels/entities/channel.entity';
 import { ChannelMember } from '../../channels/entities/channel-member.entity';
 import { ChannelOverwrite } from '../../channels/entities/channel-overwrite.entity';
 import { ReadState } from '../../channels/entities/readState.entity';
+import { Invitation } from '../../invitations/entities/invitation.entity';
 import { Message } from '../../messages/entities/message.entity';
 import {
   Notification,
   NotificationType,
 } from '../../notifications/entities/notification.entity';
+import { Role } from '../../roles/entities/role.entity';
+import { Server } from '../../servers/entities/server.entity';
+import { ServerMember } from '../../servers/entities/server-member.entity';
 import { UserSubscriber } from '../../users/user.subscriber';
+import { User } from '../../users/entities/user.entity';
 
-// ---------------------------------------------------
-// Standalone DataSource — no NestJS/AppModule needed
-// ---------------------------------------------------
+const loadEnvFile = (filePath: string): void => {
+  if (!existsSync(filePath)) {
+    return;
+  }
+
+  const contents = readFileSync(filePath, 'utf8');
+  for (const line of contents.split(/\r?\n/)) {
+    const trimmed = line.trim();
+
+    if (!trimmed || trimmed.startsWith('#')) {
+      continue;
+    }
+
+    const equalsIndex = trimmed.indexOf('=');
+    if (equalsIndex === -1) {
+      continue;
+    }
+
+    const key = trimmed.slice(0, equalsIndex).trim();
+    const rawValue = trimmed.slice(equalsIndex + 1).trim();
+    const value = rawValue.replace(/^['\\"]|['\\"]$/g, '');
+
+    if (!process.env[key]) {
+      process.env[key] = value;
+    }
+  }
+};
+
+loadEnvFile(resolve(process.cwd(), '.env'));
+loadEnvFile(resolve(process.cwd(), '.env.example'));
+
 const AppDataSource = new DataSource({
   type: 'postgres',
   host: process.env.DB_HOST ?? 'localhost',
   port: Number(process.env.DB_PORT ?? 5432),
-  username: process.env.DB_USER ?? 'postgres',
-  password: process.env.DB_PASS ?? 'postgres',
+  username: process.env.DB_USERNAME ?? 'postgres',
+  password: process.env.DB_PASSWORD ?? 'postgres',
   database: process.env.DB_NAME ?? 'discord',
   entities: [
     User,
@@ -36,13 +69,17 @@ const AppDataSource = new DataSource({
     ChannelOverwrite,
     ReadState,
     Message,
+    Invitation,
     Notification,
   ],
-  subscribers: [UserSubscriber], // 👈 this is what was missing
+  subscribers: [UserSubscriber],
   synchronize: true,
   dropSchema: true,
   logging: false,
 });
+
+const pick = <T>(items: T[]): T =>
+  items[Math.floor(Math.random() * items.length)];
 
 async function seed() {
   console.log('🌱 Starting database seeder...');
@@ -58,34 +95,34 @@ async function seed() {
   const overwriteRepo = AppDataSource.getRepository(ChannelOverwrite);
   const readStateRepo = AppDataSource.getRepository(ReadState);
   const messageRepo = AppDataSource.getRepository(Message);
+  const invitationRepo = AppDataSource.getRepository(Invitation);
   const notificationRepo = AppDataSource.getRepository(Notification);
 
-  // ---------------------------------------------------
-  // 1. Users
-  // ---------------------------------------------------
-  console.log('👤 Seeding Users...');
+  console.log('👤 Seeding users...');
   const users = await userRepo.save(
-    Array.from({ length: 10 }, () =>
-      userRepo.create({
-        firstName: faker.person.firstName(),
-        lastName: faker.person.lastName(),
-        email: faker.internet.email(),
-        username: faker.internet.username(),
+    Array.from({ length: 10 }, (_, index) => {
+      const firstName = faker.person.firstName();
+      const lastName = faker.person.lastName();
+
+      return userRepo.create({
+        firstName,
+        lastName,
+        email: `seed.user${index + 1}@example.com`,
+        username: `seed_user_${index + 1}`,
         password: 'password123',
-      }),
-    ),
+      });
+    }),
   );
+
   const owner = users[0];
 
-  // ---------------------------------------------------
-  // 2. Server
-  // ---------------------------------------------------
-  console.log('🖥️  Seeding Server...');
+  console.log('🖥️  Seeding server...');
   const server = await serverRepo.save(
     serverRepo.create({
       name: `${owner.username}'s Gaming Hub`,
-      ownerId: String(owner.id),
-      inviteCode: faker.string.alphanumeric(8),
+      ownerId: owner.id,
+      isPublic: true,
+      icon: '',
       description: faker.lorem.sentence(),
       category: faker.helpers.arrayElement([
         'gaming',
@@ -100,10 +137,7 @@ async function seed() {
     }),
   );
 
-  // ---------------------------------------------------
-  // 3. Roles
-  // ---------------------------------------------------
-  console.log('🛡️  Seeding Roles...');
+  console.log('🛡️  Seeding roles...');
   const [everyoneRole, adminRole] = await roleRepo.save([
     roleRepo.create({
       name: '@everyone',
@@ -121,28 +155,23 @@ async function seed() {
     }),
   ]);
 
-  // ---------------------------------------------------
-  // 4. Server Members (two-phase to avoid FK race)
-  // ---------------------------------------------------
-  console.log('👥 Seeding Server Members...');
+  console.log('👥 Seeding server members...');
   const members = await memberRepo.save(
     users.map((user) =>
       memberRepo.create({
         serverId: server.id,
-        userId: String(user.id),
+        memberId: user.id,
       }),
     ),
   );
 
-  for (let i = 0; i < members.length; i++) {
-    members[i].roles = i === 0 ? [everyoneRole, adminRole] : [everyoneRole];
+  for (let index = 0; index < members.length; index += 1) {
+    members[index].roles =
+      index === 0 ? [everyoneRole, adminRole] : [everyoneRole];
   }
   await memberRepo.save(members);
 
-  // ---------------------------------------------------
-  // 5. Channels
-  // ---------------------------------------------------
-  console.log('💬 Seeding Channels...');
+  console.log('💬 Seeding channels...');
   const [generalChannel, adminChannel] = await channelRepo.save([
     channelRepo.create({
       name: 'general',
@@ -165,15 +194,12 @@ async function seed() {
     dmUsers.map((user) =>
       channelMemberRepo.create({
         channelId: dmChannel.id,
-        userId: String(user.id),
+        userId: user.id,
       }),
     ),
   );
 
-  // ---------------------------------------------------
-  // 6. Channel Overwrites
-  // ---------------------------------------------------
-  console.log('🔒 Seeding Channel Overwrites...');
+  console.log('🔒 Seeding channel overwrites...');
   await overwriteRepo.save([
     overwriteRepo.create({
       channelId: adminChannel.id,
@@ -191,16 +217,14 @@ async function seed() {
     }),
   ]);
 
-  // ---------------------------------------------------
-  // 7. Messages
-  // ---------------------------------------------------
-  console.log('📝 Seeding Messages...');
+  console.log('📝 Seeding messages...');
   const generalMessages = await messageRepo.save(
     Array.from({ length: 20 }, () => {
-      const randomUser = users[Math.floor(Math.random() * users.length)];
+      const randomUser = pick(users);
+
       return messageRepo.create({
         content: faker.lorem.sentence(),
-        authorId: String(randomUser.id),
+        authorId: randomUser.id,
         channelId: generalChannel.id,
       });
     }),
@@ -208,10 +232,11 @@ async function seed() {
 
   const dmMessages = await messageRepo.save(
     Array.from({ length: 8 }, () => {
-      const randomUser = dmUsers[Math.floor(Math.random() * dmUsers.length)];
+      const randomUser = pick(dmUsers);
+
       return messageRepo.create({
         content: faker.lorem.sentence(),
-        authorId: String(randomUser.id),
+        authorId: randomUser.id,
         channelId: dmChannel.id,
       });
     }),
@@ -228,16 +253,13 @@ async function seed() {
     }),
   ]);
 
-  // ---------------------------------------------------
-  // 8. Read States
-  // ---------------------------------------------------
-  console.log('👀 Seeding Read States...');
+  console.log('👀 Seeding read states...');
   await readStateRepo.save(
     users.map((user) =>
       readStateRepo.create({
-        userId: String(user.id),
+        userId: user.id,
         channelId: generalChannel.id,
-        lastReadMessageId: generalMessages.at(-1)?.id ?? undefined,
+        lastReadMessageId: generalMessages.at(-1)!.id,
       }),
     ),
   );
@@ -245,21 +267,30 @@ async function seed() {
   await readStateRepo.save(
     dmUsers.map((user) =>
       readStateRepo.create({
-        userId: String(user.id),
+        userId: user.id,
         channelId: dmChannel.id,
-        lastReadMessageId: dmMessages.at(-1)?.id ?? undefined,
+        lastReadMessageId: dmMessages.at(-1)!.id,
       }),
     ),
   );
 
-  // ---------------------------------------------------
-  // 9. Notifications
-  // ---------------------------------------------------
-  console.log('🔔 Seeding Notifications...');
+  console.log('🔗 Seeding invitations...');
+  const invitation = await invitationRepo.save(
+    invitationRepo.create({
+      inviteCode: faker.string.alphanumeric(8),
+      serverId: server.id,
+      inviterId: owner.id,
+      currentUses: 1,
+      maxUses: 10,
+      expiresAt: null,
+    }),
+  );
+
+  console.log('🔔 Seeding notifications...');
   await notificationRepo.save([
     notificationRepo.create({
-      recipientId: String(users[3].id),
-      senderId: String(users[0].id),
+      recipientId: users[3].id,
+      senderId: owner.id,
       serverId: server.id,
       channelId: generalChannel.id,
       content: 'You were mentioned in #general',
@@ -268,20 +299,34 @@ async function seed() {
       isRead: false,
     }),
     notificationRepo.create({
-      recipientId: String(users[4].id),
-      senderId: String(users[1].id),
+      recipientId: users[4].id,
+      senderId: users[1].id,
       content: 'New message request',
       link: `/channels/@me/${dmChannel.id}`,
       type: NotificationType.DM,
       isRead: true,
     }),
+    notificationRepo.create({
+      recipientId: owner.id,
+      senderId: users[2].id,
+      serverId: server.id,
+      content: `Invitation ${invitation.inviteCode} created`,
+      link: `/invite/${invitation.inviteCode}`,
+      type: NotificationType.OTHER,
+      isRead: false,
+    }),
   ]);
 
   console.log('✅ Database seeded successfully!');
-  await AppDataSource.destroy();
 }
 
-seed().catch((err) => {
-  console.error('❌ Seeding failed!', err);
-  process.exit(1);
-});
+seed()
+  .catch((err) => {
+    console.error('❌ Seeding failed!', err);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    if (AppDataSource.isInitialized) {
+      await AppDataSource.destroy();
+    }
+  });

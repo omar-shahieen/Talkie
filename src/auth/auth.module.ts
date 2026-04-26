@@ -13,7 +13,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthGoogleGuard } from './guards/auth-google.guard';
 import { RealtimeAuthGuard } from './guards/auth-realtime.guard';
 import { SocketAuthMiddleware } from './middleware/socket-auth.middleware';
-import { User } from 'src/users/entities/user.entity';
+import { User } from '../users/entities/user.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Global()

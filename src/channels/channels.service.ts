@@ -4,10 +4,10 @@ import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
 import { Channel, ChannelType } from './entities/channel.entity';
 import { DataSource, In, Repository } from 'typeorm';
-import { PermissionsService } from '../access-control/rbac/permissions.service';
-import { Permission } from '../access-control/rbac/permissions.constants';
+import { Permission } from '../access-control/server-permissions/serverPermissions.constants';
 import { ChannelMember } from './entities/channel-member.entity';
 import { ReadState } from './entities/readState.entity';
+import { ServerPermissionsService } from 'src/access-control/server-permissions/serverPermissions.service';
 
 @Injectable()
 export class ChannelsService {
@@ -16,7 +16,7 @@ export class ChannelsService {
     private readonly channelsRepository: Repository<Channel>,
     @InjectRepository(ReadState)
     private readonly readStatesRepository: Repository<ReadState>,
-    private readonly permissionsService: PermissionsService,
+    private readonly permissionsService: ServerPermissionsService,
     private readonly dataSource: DataSource,
   ) {}
 

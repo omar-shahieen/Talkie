@@ -1,6 +1,6 @@
 import { Controller, Get, Patch, Param, Req } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
-import { type AuthenticatedRequest } from 'src/auth/types/authenticated-request.type';
+import { type AuthenticatedRequest } from '../auth/types/authenticated-request.type';
 
 @Controller('notifications')
 export class NotificationsController {

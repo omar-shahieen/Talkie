@@ -1,25 +1,33 @@
 import { Module, Global } from '@nestjs/common';
-import { PermissionsService } from './rbac/permissions.service';
 import { AccessControlController } from './access-control.controller';
-import { PermissionsGuard } from './rbac/permissions.guard';
+import { ServerPermissionsGuard } from './server-permissions/serverPermissions.guard';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ServerMember } from '../users/entities/server-member.entity';
+import { ServerMember } from '../servers/entities/server-member.entity';
 import { Server } from '../servers/entities/server.entity';
 import { ChannelOverwrite } from '../channels/entities/channel-overwrite.entity';
 import { APP_GUARD } from '@nestjs/core';
-import { Channel } from 'src/channels/entities/channel.entity';
-import { Role } from 'src/roles/entities/role.entity';
+import { Channel } from '../channels/entities/channel.entity';
+import { Role } from '../roles/entities/role.entity';
+import { ServerPermissionsService } from './server-permissions/serverPermissions.service';
+import { AppPermissionsGuard } from './app-permissions/appPermissions.guard';
+import { AppPermissionsService } from './app-permissions/appPermissions.service';
+import { User } from 'src/users/entities/user.entity';
 
 @Global()
 @Module({
   providers: [
-    PermissionsService,
+    ServerPermissionsService,
+    AppPermissionsService,
     {
       provide: APP_GUARD,
-      useClass: PermissionsGuard,
+      useClass: ServerPermissionsGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: AppPermissionsGuard,
     },
   ],
-  exports: [PermissionsService],
+  exports: [ServerPermissionsService],
   imports: [
     TypeOrmModule.forFeature([
       ServerMember,
@@ -27,6 +35,7 @@ import { Role } from 'src/roles/entities/role.entity';
       Channel,
       Role,
       ChannelOverwrite,
+      User,
     ]),
   ],
   controllers: [AccessControlController],

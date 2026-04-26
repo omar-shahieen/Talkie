@@ -7,7 +7,9 @@ export class AuditLoggerListener {
   constructor(
     private readonly auditService: AuditService,
     private readonly logger: LoggingService,
-  ) {}
+  ) {
+    this.logger.child({ context: AuditLoggerListener.name });
+  }
 
   @OnEvent(Object.values(AppEvents))
   async handleAppEvent(event: AppEvents, payload: Record<string, unknown>) {
@@ -15,7 +17,6 @@ export class AuditLoggerListener {
       const audit = await this.auditService.create(event, payload);
       this.logger.log(
         `[AuditLogger] Saved → event: ${event} (id: ${audit.id})`,
-        AuditLoggerListener.name,
       );
     } catch (error) {
       this.logger.error(

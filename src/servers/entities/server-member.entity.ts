@@ -5,7 +5,7 @@ import {
   ManyToOne,
   PrimaryColumn,
 } from 'typeorm';
-import { Server } from '../../servers/entities/server.entity';
+import { Server } from './server.entity';
 import { Role } from '../../roles/entities/role.entity';
 
 @Entity('server_members')
@@ -22,8 +22,11 @@ export class ServerMember {
   @ManyToMany(() => Role)
   @JoinTable({
     name: 'member_roles',
-    joinColumn: { name: 'memberId', referencedColumnName: 'memberId' },
-    inverseJoinColumn: { name: 'roleId', referencedColumnName: 'id' },
+    joinColumns: [
+      { name: 'memberId', referencedColumnName: 'memberId' },
+      { name: 'serverId', referencedColumnName: 'serverId' },
+    ],
+    inverseJoinColumns: [{ name: 'roleId', referencedColumnName: 'id' }],
   })
   roles!: Role[];
 }

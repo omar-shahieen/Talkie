@@ -2,9 +2,9 @@ import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { WsException } from '@nestjs/websockets';
 import { jwtConstants, JwtPayload } from '../constants';
-import { AuthenticatedSocket } from 'src/auth/types/authenticated-socket.type';
+import { AuthenticatedSocket } from '../../auth/types/authenticated-socket.type';
 import { Socket } from 'socket.io';
-import { LoggingService } from 'src/logging/logging.service';
+import { LoggingService } from '../../logging/logging.service';
 
 @Injectable()
 export class RealtimeAuthGuard implements CanActivate {

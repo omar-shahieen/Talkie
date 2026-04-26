@@ -6,8 +6,8 @@ import {
 } from '@nestjs/bullmq';
 import { OnEvent } from '@nestjs/event-emitter';
 import { Queue } from 'bullmq';
-import { AppEvents } from 'src/events/events.enum';
-import { LoggingService } from 'src/logging/logging.service';
+import { AppEvents } from '../events/events.enum';
+import { LoggingService } from '../logging/logging.service';
 
 @QueueEventsListener('mail')
 export class MailQueueListener extends QueueEventsHost {

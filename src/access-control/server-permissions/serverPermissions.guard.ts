@@ -6,12 +6,13 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { PERMISSION_KEY } from './require-permission.decorator';
-import { PermissionsService } from './permissions.service';
+
 import { LoggingService } from '../../logging/logging.service';
 import { EventBusService } from '../../events/event-bus.service';
 import { AppEvents } from '../../events/events.enum';
 import { Request } from 'express';
+import { PERMISSION_SERVER_KEY } from './requireServerPermission.decorator';
+import { ServerPermissionsService } from './serverPermissions.service';
 
 // ── Dedicated types ──────────────────────────────────────────────────────────
 
@@ -52,17 +53,19 @@ interface WsPayload {
 // ── Guard ────────────────────────────────────────────────────────────────────
 
 @Injectable()
-export class PermissionsGuard implements CanActivate {
+export class ServerPermissionsGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    private readonly permissionsService: PermissionsService,
+    private readonly permissionsService: ServerPermissionsService,
     private readonly logger: LoggingService,
     private readonly eventBus: EventBusService,
-  ) {}
+  ) {
+    this.logger.child({ context: ServerPermissionsGuard.name });
+  }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredPermissions = this.reflector.getAllAndOverride<bigint[]>(
-      PERMISSION_KEY,
+      PERMISSION_SERVER_KEY,
       [context.getHandler(), context.getClass()],
     );
 
@@ -72,10 +75,9 @@ export class PermissionsGuard implements CanActivate {
 
     const { userId, serverId, channelId } = this.extractContext(context);
 
-    if (!userId || !serverId || !channelId) {
+    if (!userId || !serverId) {
       this.logger.warn(
         `Permission context rejected: userId=${userId ?? 'missing'} serverId=${serverId ?? 'missing'} channelId=${channelId ?? 'missing'}`,
-        PermissionsGuard.name,
       );
       throw new ForbiddenException(
         'Permission context is incomplete: userId, serverId and channelId are required.',
@@ -100,7 +102,6 @@ export class PermissionsGuard implements CanActivate {
 
       this.logger.warn(
         `Permission denied for userId=${userId} serverId=${serverId} channelId=${channelId}`,
-        PermissionsGuard.name,
       );
       this.eventBus.emit(AppEvents.PERMISSION_DENIED, payload);
 

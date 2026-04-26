@@ -2,7 +2,7 @@ import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { AppEvents } from '../events/events.enum';
 import { MailService } from './mail.service';
-import { LoggingService } from 'src/logging/logging.service';
+import { LoggingService } from '../logging/logging.service';
 
 export interface MailJobData {
   email: string;

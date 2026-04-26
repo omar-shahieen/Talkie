@@ -17,7 +17,7 @@ import { EventBusService } from '../events/event-bus.service';
 import { AppEvents } from '../events/events.enum';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from 'src/users/entities/user.entity';
+import { User } from '../users/entities/user.entity';
 import { nanoid } from 'nanoid';
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 

@@ -7,8 +7,8 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Server } from './server.entity';
-import { ServerMember } from '../../users/entities/server-member.entity';
+import { Server } from 'src/servers/entities/server.entity';
+import { User } from '../../users/entities/user.entity';
 
 @Entity('invitations')
 export class Invitation {
@@ -42,7 +42,7 @@ export class Invitation {
   @ManyToOne(() => Server, (server) => server.invitations)
   server!: Server;
 
-  @ManyToOne(() => ServerMember)
-  @JoinColumn({ name: 'inviterId', referencedColumnName: 'memberId' })
-  inviter!: ServerMember;
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'inviterId', referencedColumnName: 'id' })
+  inviter!: User;
 }

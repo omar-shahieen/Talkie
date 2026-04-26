@@ -9,9 +9,9 @@ import {
 import { Request, Response } from 'express';
 import { AppException } from '../exceptions/base.exception';
 import { AsyncContext } from '../context/async-context.service';
-import { LoggingService } from 'src/logging/logging.service';
 import { ErrorResponse } from './interfaces/errorResponse.interface';
 import { QueryFailedError } from 'typeorm';
+import { LoggingService } from 'src/logging/logging.service';
 
 //  Define the shape of a Postgres driver error
 // Postgres provides more context than just 'code', so we type those too.

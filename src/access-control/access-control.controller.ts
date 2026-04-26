@@ -1,22 +1,20 @@
-import { Controller, Get, Query } from '@nestjs/common';
-import { PermissionsService } from './rbac/permissions.service';
-import { RequirePermissions } from './rbac/require-permission.decorator';
-import { Permission } from './rbac/permissions.constants';
+import { Controller, Get } from '@nestjs/common';
+import { RequireServerPermissions } from './server-permissions/requireServerPermission.decorator';
+import { Permission } from './server-permissions/serverPermissions.constants';
+import { RequireAppRole } from './app-permissions/requireAppRole.decorator';
+import { AppRole } from 'src/users/entities/user.entity';
 @Controller('access-control')
 export class AccessControlController {
-  constructor(private readonly permissionsService: PermissionsService) {}
+  constructor() {}
 
-  @Get('resolve')
-  @RequirePermissions(Permission.Administrator) // Example: require Administrator permission to access this endpoint
-  resolve(
-    @Query('userId') userId: string,
-    @Query('serverId') serverId: string,
-    @Query('channelId') channelId: string,
-  ) {
-    return this.permissionsService.resolveForChannel(
-      userId,
-      serverId,
-      channelId,
-    );
+  @Get('resolveServer/:userId/:serverId')
+  @RequireServerPermissions(Permission.Administrator) // Example: require Administrator permission to access this endpoint
+  resolveServer() {
+    return { message: 'server permissions work' };
+  }
+  @Get('resolveApp')
+  @RequireAppRole(AppRole.ADMIN) // Example: require Administrator permission to access this endpoint
+  resolve() {
+    return { message: 'app permissions work' };
   }
 }

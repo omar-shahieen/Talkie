@@ -2,7 +2,6 @@ import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuditModule } from './audit/audit.module';
-import { MongooseModule } from '@nestjs/mongoose';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { AccessControlModule } from './access-control/access-control.module';
@@ -26,14 +25,11 @@ import { PresenceModule } from './presence/presence.module';
 import { BullModule } from '@nestjs/bullmq';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
+import { InvitationsModule } from './invitations/invitations.module';
 import Redis from 'ioredis';
 
 @Module({
   imports: [
-    MongooseModule.forRoot(
-      // db for audit
-      process.env.MONGO_URI ?? 'mongodb://localhost:27017/discord_demo',
-    ),
     CacheModule.register({
       // cache
       isGlobal: true,
@@ -122,6 +118,7 @@ import Redis from 'ioredis';
     MessagesModule,
     NotificationsModule,
     PresenceModule,
+    InvitationsModule,
   ],
   controllers: [AppController],
   providers: [
