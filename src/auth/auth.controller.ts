@@ -4,7 +4,9 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
+  Put,
   Req,
   Res,
   UnauthorizedException,
@@ -21,16 +23,16 @@ import { VerifyTfaDto } from './dtos/tfa.dto';
 import { AuthGoogleGuard } from './guards/auth-google.guard';
 import { LoggingService } from '../logging/logging.service';
 import { type AuthenticatedRequest } from './types/authenticated-request.type';
+import { ChangePasswordDto } from './dtos/changePassword.dto';
+import { ForgetPasswordDto } from './dtos/forgetPassowrd.dto';
+import { ResetPasswordDto } from './dtos/resetPassword.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-    private readonly logger: LoggingService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
-  @HttpCode(HttpStatus.OK)
   @Public()
+  @HttpCode(HttpStatus.OK)
   @UseGuards(LocalAuthGuard)
   @Post('login')
   async signIn(
@@ -38,16 +40,13 @@ export class AuthController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    if (req.user.isTfaEnabled) {
-      const tfaLoginToken = await this.authService.createTfaLoginToken(
-        req.user,
-      );
 
       return { tfaRequired: true, tfaLoginToken };
     }
 
     const { access_token, refresh_token } = await this.authService.signIn(
-      req.user,
+      req.user.id,
+      req.user.email,
     );
 
     this.setRefreshCookie(res, refresh_token);
@@ -59,13 +58,6 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('refresh')
   createRefreshToken(@Cookies('jwt_refresh') jwt_refresh: string) {
-    if (!jwt_refresh) {
-      this.logger.warn(
-        'Refresh token request rejected: missing jwt_refresh cookie',
-        AuthController.name,
-      );
-      throw new UnauthorizedException('No refresh token provided');
-    }
     return this.authService.refreshToken(jwt_refresh);
   }
 
@@ -74,10 +66,45 @@ export class AuthController {
   async signUp(@Body() signUpDto: SignUpDto) {
     return this.authService.signUp(signUpDto);
   }
+  @Public()
+  @Post('test')
+  test(@Body() signUpDto: SignUpDto) {
+    return signUpDto;
+  }
 
-  @Get('profile')
-  getProfile(@Req() req: AuthenticatedRequest) {
-    return req.user;
+  @Put('change-password')
+  changePassword(
+    @Body() changePasswodDto: ChangePasswordDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.authService.changePassword(
+      req.user.id,
+      changePasswodDto.oldPassword,
+      changePasswodDto.newPassword,
+    );
+  }
+  @Public()
+  @Post('forget-passwrod')
+  forgetPassword(
+    @Body() forgetPassowrdDto: ForgetPasswordDto,
+    @Req() req: Request,
+  ) {
+    const protocol = req.protocol;
+    const host = req.get('host');
+
+    const fullUrl = `${protocol}://${host}`;
+    return this.authService.forgetPassword(forgetPassowrdDto.email, fullUrl);
+  }
+  @Public()
+  @Post('reset-passwrod')
+  resetPassword(
+    @Body() resetPassowrdDto: ResetPasswordDto,
+    @Param('resetToken') resetToken: string,
+  ) {
+    return this.authService.resetPassword(
+      resetPassowrdDto.newPassword,
+      resetToken ?? resetPassowrdDto.resetToken,
+    );
   }
 
   @Public()
@@ -97,7 +124,8 @@ export class AuthController {
 
     if (req.user.isTfaEnabled) {
       const tfaLoginToken = await this.authService.createTfaLoginToken(
-        req.user,
+        req.user.id,
+        req.user.email,
       );
 
       res.redirect(
@@ -109,7 +137,8 @@ export class AuthController {
     }
 
     const { access_token, refresh_token } = await this.authService.signIn(
-      req.user,
+      req.user.id,
+      req.user.email,
     );
 
     // Set refresh token in cookie same as local login

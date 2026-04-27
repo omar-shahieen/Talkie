@@ -7,9 +7,9 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
-import { SocketAuthMiddleware } from 'src/auth/middleware/socket-auth.middleware';
-import { AuthenticatedSocket } from 'src/auth/types/authenticated-socket.type';
-import { LoggingService } from 'src/logging/logging.service';
+import { SocketAuthMiddleware } from '../auth/middleware/socket-auth.middleware';
+import { AuthenticatedSocket } from '../auth/types/authenticated-socket.type';
+import { LoggingService } from '../logging/logging.service';
 import { type NotificationDto } from './dtos/notification.dto';
 
 @WebSocketGateway({ namespace: 'notifications' })

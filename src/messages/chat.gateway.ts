@@ -2,10 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 
 import { AppEvents } from '../events/events.enum';
-import { SocketAuthMiddleware } from 'src/auth/middleware/socket-auth.middleware';
-import { RequirePermissions } from '../access-control/rbac/require-permission.decorator';
-import { Permission } from '../access-control/rbac/permissions.constants';
-import { LoggingService } from 'src/logging/logging.service';
+import { SocketAuthMiddleware } from '../auth/middleware/socket-auth.middleware';
+import { RequireServerPermissions } from '../access-control/server-permissions/requireServerPermission.decorator';
+import { Permission } from '../access-control/server-permissions/serverPermissions.constants';
+import { LoggingService } from '../logging/logging.service';
 import {
   ConnectedSocket,
   MessageBody,
@@ -18,9 +18,9 @@ import {
   WsException,
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
-import { type AuthenticatedSocket } from 'src/auth/types/authenticated-socket.type';
+import { type AuthenticatedSocket } from '../auth/types/authenticated-socket.type';
 
-import { UsersService } from 'src/users/users.service';
+import { UsersService } from '../users/users.service';
 import type {
   ChannelRoomPayload,
   MessageCreatedPayload,
@@ -28,8 +28,8 @@ import type {
   PresenceStatus,
   TypingPayload,
 } from './chat.types';
-import { PresenceService } from 'src/presence/presence.service';
-import { ChannelsService } from 'src/channels/channels.service';
+import { PresenceService } from '../presence/presence.service';
+import { ChannelsService } from '../channels/channels.service';
 
 @Injectable()
 @WebSocketGateway({
@@ -127,7 +127,7 @@ export class ChatGateway
   }
 
   @SubscribeMessage('channel:join')
-  @RequirePermissions(Permission.ViewChannel)
+  @RequireServerPermissions(Permission.ViewChannel)
   async joinChannel(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() payload: ChannelRoomPayload,
@@ -179,7 +179,7 @@ export class ChatGateway
   }
 
   @SubscribeMessage('typing:start')
-  @RequirePermissions(Permission.SendMessages)
+  @RequireServerPermissions(Permission.SendMessages)
   startTyping(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() payload: TypingPayload,
@@ -195,7 +195,7 @@ export class ChatGateway
   }
 
   @SubscribeMessage('typing:stop')
-  @RequirePermissions(Permission.SendMessages)
+  @RequireServerPermissions(Permission.SendMessages)
   stopTyping(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() payload: TypingPayload,

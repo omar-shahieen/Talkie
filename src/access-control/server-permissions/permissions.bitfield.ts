@@ -1,6 +1,5 @@
-// src/permissions/permissions.bitfield.ts
 import { Exclude, Expose } from 'class-transformer';
-import { Permission } from './permissions.constants';
+import { Permission } from './serverPermissions.constants';
 
 export class PermissionsBitfield {
   @Exclude()

@@ -11,7 +11,7 @@ import {
 import { ChannelsService } from './channels.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
-import { type AuthenticatedRequest } from 'src/auth/types/authenticated-request.type';
+import { type AuthenticatedRequest } from '../auth/types/authenticated-request.type';
 
 @Controller('channels')
 export class ChannelsController {

@@ -9,4 +9,4 @@ export const Permission = {
   Administrator: 1n << 7n,
 } as const;
 
-export type PermissionKey = keyof typeof Permission;
+export type ServerPermissionKey = keyof typeof Permission;

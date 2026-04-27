@@ -1,9 +1,25 @@
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
+
 export class CreateServerDto {
-  name: string;
-  ownerId: string;
+  @IsString()
+  name!: string;
+
+  @IsString()
+  ownerId!: string;
+
+  @IsBoolean()
+  @IsOptional()
   isPublic?: boolean;
+
+  @IsString()
+  @IsOptional()
   description?: string;
+
+  @IsString()
+  @IsOptional()
   category?: string;
+
+  @IsString()
+  @IsOptional()
   tags?: string[];
-  inviteCode?: string;
 }

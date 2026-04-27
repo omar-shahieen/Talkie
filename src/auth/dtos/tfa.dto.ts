@@ -2,11 +2,11 @@ import { IsEmail, IsNumberString, Length } from 'class-validator';
 
 export class InitiateTfaDto {
   @IsEmail()
-  email: string;
+  email!: string;
 }
 
 export class VerifyTfaDto {
   @IsNumberString()
   @Length(6, 6)
-  tfaToken: string;
+  tfaToken!: string;
 }

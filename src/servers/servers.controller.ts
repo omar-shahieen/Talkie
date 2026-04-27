@@ -7,12 +7,16 @@ import {
   Patch,
   Post,
   Query,
+  Req,
 } from '@nestjs/common';
 import { ServersService } from './servers.service';
 import { CreateServerDto } from './dto/create-server.dto';
 import { UpdateServerDto } from './dto/update-server.dto';
-import { JoinServerDto } from './dto/join-server.dto';
 import { DiscoverServersDto } from './dto/discover-servers.dto';
+import { CreateInvitationDto } from './dto/create-invititaion.dto';
+import { type AuthenticatedRequest } from '../auth/types/authenticated-request.type';
+import { Permission } from '../access-control/server-permissions/serverPermissions.constants';
+import { RequireServerPermissions } from 'src/access-control/server-permissions/requireServerPermission.decorator';
 
 @Controller('servers')
 export class ServersController {
@@ -38,11 +42,6 @@ export class ServersController {
     return this.serversService.discover(query);
   }
 
-  @Post('join')
-  joinByInvite(@Body() payload: JoinServerDto) {
-    return this.serversService.joinByInvite(payload);
-  }
-
   @Delete(':id/leave/:userId')
   leave(@Param('id') id: string, @Param('userId') userId: string) {
     return this.serversService.leaveServer(id, userId);
@@ -61,5 +60,24 @@ export class ServersController {
   @Delete(':id')
   remove(@Param('id') id: string, @Query('requesterId') requesterId: string) {
     return this.serversService.remove(id, requesterId);
+  }
+
+  @Post('/:serverId/invitation')
+  @RequireServerPermissions(Permission.Administrator)
+  async craeteInvitation(
+    @Body() payload: CreateInvitationDto,
+    @Req() req: AuthenticatedRequest,
+    @Param('serverId') serverId: string,
+  ) {
+    return this.serversService.createInviation(req.user.id, serverId, payload);
+  }
+
+  @Get('/:serverId/invitation')
+  @RequireServerPermissions(Permission.Administrator)
+  async findUserInvitations(
+    @Req() req: AuthenticatedRequest,
+    @Param('serverId') serverId: string,
+  ) {
+    return this.serversService.findUserInvitations(req.user.id, serverId);
   }
 }

@@ -37,7 +37,7 @@ export class MailService {
     }
   }
 
-  async handleUserSignupEvent(payload: { email: string; username?: string }) {
+  async sendUserSignup(payload: { email: string; username?: string }) {
     await this.sendEmail({
       to: payload.email,
       subject: 'Welcome to our App!',
@@ -48,7 +48,7 @@ export class MailService {
     });
   }
 
-  async handleUserTfaEnabledEvent(payload: { email: string }) {
+  async sendUserTfaEnabled(payload: { email: string }) {
     await this.sendEmail({
       to: payload.email,
       subject: 'Two-factor authentication enabled',
@@ -59,13 +59,28 @@ export class MailService {
     });
   }
 
-  async handleUserTfaDisabledEvent(payload: { email: string }) {
+  async sendUserTfaDisabled(payload: { email: string }) {
     await this.sendEmail({
       to: payload.email,
       subject: 'Two-factor authentication disabled',
       template: 'tfa-disabled',
       context: {
         email: payload.email,
+      },
+    });
+  }
+  async sendResetPasswordLink(payload: {
+    email: string;
+    reseturlLink: string;
+    username: string;
+  }) {
+    await this.sendEmail({
+      to: payload.email,
+      subject: 'Two-factor authentication disabled',
+      template: 'tfa-disabled',
+      context: {
+        username: payload.username,
+        resetLink: payload.reseturlLink,
       },
     });
   }

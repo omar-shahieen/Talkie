@@ -4,9 +4,14 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
+export enum AppRole {
+  USER = 'user',
+  ADMIN = 'admin',
+}
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -33,9 +38,6 @@ export class User {
   @Column({ nullable: true, select: false, unique: true })
   currentJwtToken?: string;
 
-  @Column({ default: true })
-  isActive!: boolean;
-
   @Column({ default: false })
   isTfaEnabled!: boolean;
 
@@ -48,11 +50,16 @@ export class User {
   @Column({ type: 'timestamp', nullable: true })
   dnd_until?: Date | null;
 
+  @Column({ type: 'enum', enum: AppRole, default: AppRole.USER, select: false })
+  appRole!: AppRole;
   @CreateDateColumn()
   createdAt!: Date;
 
   @UpdateDateColumn()
   updatedAt!: Date;
+
+  @DeleteDateColumn()
+  deletedAt!: Date; // This will store the deletion timestamp
 
   async comparePassword(plain: string): Promise<boolean> {
     if (!this.password) return false;

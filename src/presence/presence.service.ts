@@ -1,8 +1,10 @@
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
-import { LoggingService } from 'src/logging/logging.service';
-import { PresenceStatus } from 'src/messages/chat.types';
-import { UsersService } from 'src/users/users.service';
+import { LoggingService } from '../logging/logging.service';
+import { PresenceStatus } from '../messages/chat.types';
+import { Repository } from 'typeorm';
+import { User } from 'src/users/entities/user.entity';
+import { InjectRepository } from '@nestjs/typeorm';
 
 export const PRESENCE_PRIORITIES: Record<PresenceStatus, number> = {
   dnd: 3,
@@ -27,7 +29,8 @@ export class PresenceService {
   constructor(
     @Inject(CACHE_MANAGER) private cache: Cache,
     private readonly logger: LoggingService,
-    private readonly usersService: UsersService,
+    @InjectRepository(User)
+    private readonly usersRepository: Repository<User>,
   ) {}
 
   private cachePresenseKey(userId: string) {
@@ -64,13 +67,18 @@ export class PresenceService {
     }
 
     // No live state — restore from DB
-    const user = await this.usersService.findOne(userId);
+    const user = await this.usersRepository.findOneByOrFail({ id: userId });
+
     if (!user.status_preference) return 'online';
 
     if (user.status_preference === 'dnd') {
       // Check if DND has expired
       if (user.dnd_until && new Date() > new Date(user.dnd_until)) {
-        void this.usersService.clearStatusPreference(userId); // async, non-blocking
+        await this.usersRepository.update(userId, {
+          status_preference: null,
+          dnd_until: null,
+        });
+
         return 'online';
       }
       return 'dnd';
@@ -86,13 +94,16 @@ export class PresenceService {
     dndUntil?: Date,
   ): Promise<void> {
     if (status === 'dnd') {
-      await this.usersService.updateStatusPreference(userId, {
+      await this.usersRepository.update(userId, {
         status_preference: 'dnd',
         dnd_until: dndUntil ?? null,
       });
     } else {
       // Any non-dnd status clears the saved preference
-      await this.usersService.clearStatusPreference(userId);
+      await this.usersRepository.update(userId, {
+        status_preference: null,
+        dnd_until: null,
+      });
     }
   }
 

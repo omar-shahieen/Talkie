@@ -1,17 +1,19 @@
-import { Module, Global } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-import { AuditLog, AuditLogSchema } from './audit-log.schema';
-import { AuditService } from './audit.service';
-import { AuditLoggerListener } from './audit-logger.listener';
+import { Module } from '@nestjs/common';
 
-@Global()
+import { AuditService } from './audit.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuditLog } from './auditLog.entity';
+import { BullModule } from '@nestjs/bullmq';
+import { AuditWorker } from './auditLogger.worker';
+import { AuditQueueListener } from './auditQueuelistener';
+
 @Module({
   imports: [
-    MongooseModule.forFeature([
-      { name: AuditLog.name, schema: AuditLogSchema },
-    ]),
+    TypeOrmModule.forFeature([AuditLog]),
+    BullModule.registerQueue({
+      name: 'auditQueue',
+    }),
   ],
-  providers: [AuditService, AuditLoggerListener],
-  exports: [AuditService],
+  providers: [AuditService, AuditQueueListener, AuditWorker],
 })
 export class AuditModule {}

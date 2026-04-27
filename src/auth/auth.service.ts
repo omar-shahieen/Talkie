@@ -1,25 +1,33 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { UsersService } from '../users/users.service';
 import { jwtConstants, JwtPayload } from './constants';
 import { SignUpDto } from './dtos/SignUpDto';
 import { ConfigService } from '@nestjs/config';
 import * as authenticator from 'otplib';
 import { LoggingService } from '../logging/logging.service';
-import { EventBusService } from '../events/event-bus.service';
+import { EventBusService } from '../events/eventBus.service';
 import { AppEvents } from '../events/events.enum';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from '../users/entities/user.entity';
+import { nanoid } from 'nanoid';
+import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private usersService: UsersService,
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
+    @Inject(CACHE_MANAGER) private cache: Cache,
+
     private jwtService: JwtService,
     private configService: ConfigService,
     private readonly logger: LoggingService,
@@ -37,12 +45,15 @@ export class AuthService {
 
   // Called by LocalStrategy
   async validateUser(email: string, password: string) {
-    const user = await this.usersService.findByEmailWithPassword(email);
+    const user = await this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.password')
+      .where('user.email = :email', { email })
+      .getOne();
 
     if (!user) {
       this.logger.warn(
         `Auth login failed: user not found email=${this.redactEmail(email)}`,
-        AuthService.name,
       );
       this.eventBus.emit(AppEvents.USER_LOGIN_FAILED, {
         emailRedacted: this.redactEmail(email),
@@ -55,7 +66,6 @@ export class AuthService {
     if (!isMatch) {
       this.logger.warn(
         `Auth login failed: invalid credentials userId=${user.id}`,
-        AuthService.name,
       );
       this.eventBus.emit(AppEvents.USER_LOGIN_FAILED, {
         userId: user.id,
@@ -72,38 +82,129 @@ export class AuthService {
     };
   }
 
-  async signIn(user: { id: string; email: string }) {
-    const payload = { sub: user.id, username: user.email };
+  async signIn(userId: string, email: string) {
+    const payload = { sub: userId, email };
 
-    const refresh_token = await this.jwtService.signAsync(payload, {
-      expiresIn: jwtConstants.refresh_expires_in,
-    });
-    const hashedRefreshToken = await bcrypt.hash(refresh_token, 10);
-    await this.usersService.update(user.id, {
-      currentJwtToken: hashedRefreshToken,
-    });
+    const user = await this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.currentJwtToken')
+      .where('user.id = :userId', { userId })
+      .getOne();
 
+    if (!user) {
+      throw new NotFoundException('user not found');
+    }
+    // create access and refresh token
     const access_token = await this.jwtService.signAsync(payload, {
       expiresIn: jwtConstants.access_expires_in,
     });
 
+    const refresh_token = await this.jwtService.signAsync(payload, {
+      expiresIn: jwtConstants.refresh_expires_in,
+    });
+    // hash and save refresh token to db
+    const hashedRefreshToken = await bcrypt.hash(refresh_token, 10);
+
+    user.currentJwtToken = hashedRefreshToken;
+
+    await this.usersRepository.save(user);
+
     this.logger.log(
-      `Auth login succeeded for userId=${user.id}`,
+      `Auth login succeeded for email=${this.redactEmail(email)}`,
       AuthService.name,
     );
     this.eventBus.emit(AppEvents.USER_LOGIN, {
-      userId: user.id,
-      email: this.redactEmail(user.email),
+      userId: userId,
+      email: email,
       method: 'password-or-oauth',
     });
 
     return { access_token, refresh_token };
   }
 
-  async createTfaLoginToken(user: { id: string; email: string }) {
+  async changePassword(
+    userId: string,
+    oldPassword: string,
+    newPassword: string,
+  ) {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'password'], // explicitly select password since select: false
+    });
+    if (!user) {
+      throw new NotFoundException('user not found');
+    }
+
+    // check old password
+
+    if (newPassword === oldPassword) {
+      throw new BadRequestException(
+        'new password must differ from old password',
+      );
+    }
+    const isCorrectPassword = await user.comparePassword(oldPassword);
+    if (!isCorrectPassword) {
+      throw new UnauthorizedException('incorrect current password');
+    }
+
+    // store the new password
+    user.password = newPassword;
+    await this.usersRepository.save(user); // save the new password hashed
+
+    return { message: 'password changed successfully' };
+  }
+  async forgetPassword(email: string, fullurl: string) {
+    const user = await this.usersRepository.findOneBy({ email });
+
+    if (user) {
+      // invalidate any existing token for this user
+      const existingToken = await this.cache.get<string>(
+        `resetTokenByUser:${user.id}`,
+      );
+      if (existingToken) {
+        await this.cache.del(`resetToken:${existingToken}`);
+      }
+
+      const token = nanoid(64);
+      const TTL = 10 * 60 * 1000;
+
+      // store both directions
+      await this.cache.set(`resetToken:${token}`, user.id, TTL); // token → userId
+      await this.cache.set(`resetTokenByUser:${user.id}`, token, TTL); // userId → token
+
+      const reseturlLink = `${fullurl}/reset-password/?token=${token}`;
+
+      this.eventBus.emit(AppEvents.USER_FORGETPASSWORD, {
+        email: user.email,
+        username: user.username,
+        reseturlLink,
+      });
+    }
+
+    return { message: 'if user exist, email is sent to the mail box' };
+  }
+
+  async resetPassword(newPassword: string, resetToken: string) {
+    const userId = await this.cache.get<string>(`resetToken:${resetToken}`);
+    if (!userId) throw new UnauthorizedException('invalid or expired token');
+
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'password'],
+    });
+    if (!user) throw new NotFoundException('user not found');
+
+    user.password = newPassword;
+    await this.usersRepository.save(user);
+
+    // clean up both keys
+    await this.cache.del(`resetToken:${resetToken}`);
+    await this.cache.del(`resetTokenByUser:${userId}`);
+  }
+  async createTfaLoginToken(userId: string, email: string) {
     const payload: JwtPayload = {
-      sub: user.id,
-      username: user.email,
+      sub: userId,
+      email,
       tfa: true,
     };
 
@@ -137,12 +238,12 @@ export class AuthService {
       );
     }
 
-    return { id: decodedUser.sub, email: decodedUser.username };
+    return { id: decodedUser.sub, email: decodedUser.email };
   }
   async signUp(user: SignUpDto) {
     const { firstName, lastName, email, password, username } = user;
 
-    const createdUser = await this.usersService.create({
+    const createdUser = this.usersRepository.create({
       firstName,
       lastName,
       email,
@@ -150,10 +251,10 @@ export class AuthService {
       username,
     });
 
-    this.logger.log(
-      `Auth signup succeeded for userId=${createdUser.id}`,
-      AuthService.name,
-    );
+    await this.usersRepository.save(createdUser);
+
+    this.logger.log(`Auth signup succeeded for userId=${createdUser.id}`);
+
     this.eventBus.emit(AppEvents.USER_SIGNUP, {
       userId: createdUser.id,
       email,
@@ -168,32 +269,27 @@ export class AuthService {
     jwtRefreshToken: string,
   ): Promise<{ access_token: string }> {
     let decodedUser: JwtPayload;
-
     try {
       decodedUser =
         await this.jwtService.verifyAsync<JwtPayload>(jwtRefreshToken);
     } catch {
-      this.logger.warn(
-        'Refresh token verification failed: invalid signature',
-        AuthService.name,
-      );
+      this.logger.warn('Refresh token verification failed: invalid signature');
       throw new UnauthorizedException(
         'Refresh token is invalid or expired. Please sign in again.',
       );
     }
 
-    const user = await this.usersService.findByIdWithRefreshToken(
-      decodedUser.sub,
-    );
+    const user = await this.usersRepository.findOne({
+      where: { id: decodedUser.sub },
+      select: ['id', 'currentJwtToken'],
+    });
+
     const isRefreshMatch = user?.currentJwtToken
       ? await user.compareToken(jwtRefreshToken)
       : false;
 
     if (!user || !isRefreshMatch) {
-      this.logger.warn(
-        `Refresh token rejected for userId=${decodedUser.sub}`,
-        AuthService.name,
-      );
+      this.logger.warn(`Refresh token rejected for userId=${decodedUser.sub}`);
       this.eventBus.emit(AppEvents.USER_LOGIN_FAILED, {
         userId: decodedUser.sub,
         reason: 'refresh-token-mismatch',
@@ -206,33 +302,36 @@ export class AuthService {
     const newAccessToken = await this.jwtService.signAsync(
       {
         sub: decodedUser.sub,
-        username: decodedUser.username,
+        email: decodedUser.email,
       },
       {
         expiresIn: jwtConstants.access_expires_in,
       },
     );
 
-    this.logger.log(
-      `Access token refreshed for userId=${decodedUser.sub}`,
-      AuthService.name,
-    );
+    this.logger.log(`Access token refreshed for userId=${decodedUser.sub}`);
 
     return { access_token: newAccessToken };
   }
+
   async findOrCreateGoogleUser(profile: {
     googleId: string;
     email: string;
     name: string;
   }) {
     const redactedEmail = this.redactEmail(profile.email);
-    let user = await this.usersService.findByEmailWithSecrets(profile.email);
+
+    let user = await this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.googleId')
+      .where('user.email = :email', { email: profile.email })
+      .getOne();
 
     if (!user) {
       const baseUsername = profile.email.split('@')[0] || 'user';
       const generatedUsername = `${baseUsername}_${profile.googleId.slice(0, 8)}`;
 
-      user = await this.usersService.create({
+      user = this.usersRepository.create({
         email: profile.email,
         firstName: profile.name,
         lastName: '',
@@ -240,14 +339,17 @@ export class AuthService {
         googleId: profile.googleId,
         password: '',
       });
+
+      await this.usersRepository.save(user);
+
       this.logger.log(
         `Google OAuth user created userId=${user.id} email=${redactedEmail}`,
-        AuthService.name,
       );
     } else if (!user.googleId) {
-      user = await this.usersService.update(user.id, {
-        googleId: profile.googleId,
-      });
+      user.googleId = profile.googleId;
+
+      await this.usersRepository.save(user);
+
       this.logger.log(
         `Google OAuth account linked userId=${user.id} email=${redactedEmail}`,
         AuthService.name,
@@ -255,7 +357,6 @@ export class AuthService {
     } else {
       this.logger.debug(
         `Google OAuth login matched existing linked userId=${user.id} email=${redactedEmail}`,
-        AuthService.name,
       );
     }
 
@@ -277,18 +378,24 @@ export class AuthService {
 
   // Saves the secret temporarily — user must confirm with a token before it's "live"
   async initiateTfaEnabling(email: string): Promise<{ uri: string }> {
-    const user = await this.usersService.findByEmailWithSecrets(email);
+    const user = await this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.tfaSecret')
+      .where('user.email = :email', { email })
+      .getOne();
     if (!user) {
       this.logger.warn(
         `TFA setup initiation failed: user not found email=${this.redactEmail(email)}`,
-        AuthService.name,
       );
       throw new NotFoundException('User was not found for TFA setup');
     }
 
     const { uri, secret } = this.generateSecret(email);
 
-    await this.usersService.update(user.id, { tfaSecret: secret });
+    user.tfaSecret = secret;
+
+    await this.usersRepository.save(user);
+
     this.logger.log(
       `TFA setup initiated for userId=${user.id} email=${this.redactEmail(email)}`,
       AuthService.name,
@@ -329,7 +436,12 @@ export class AuthService {
     email: string;
     tfaToken: string;
   }): Promise<void> {
-    const user = await this.usersService.findByEmailWithSecrets(email);
+    const user = await this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.tfaSecret')
+      .where('user.email = :email', { email })
+      .getOne();
+
     if (!user) throw new NotFoundException('User was not found for TFA enable');
 
     if (user.isTfaEnabled) {
@@ -355,7 +467,10 @@ export class AuthService {
       );
     }
 
-    await this.usersService.update(user.id, { isTfaEnabled: true });
+    user.isTfaEnabled = true;
+
+    await this.usersRepository.save(user);
+
     this.logger.log(`TFA enabled for userId=${user.id}`, AuthService.name);
     this.eventBus.emit(AppEvents.USER_TFA_ENABLED, {
       userId: user.id,
@@ -371,7 +486,12 @@ export class AuthService {
     email: string;
     tfaToken: string;
   }): Promise<void> {
-    const user = await this.usersService.findByEmailWithSecrets(email);
+    const user = await this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.tfaSecret')
+      .where('user.email = :email', { email })
+      .getOne();
+
     if (!user)
       throw new NotFoundException('User was not found for TFA disable request');
 
@@ -391,11 +511,13 @@ export class AuthService {
       );
     }
 
-    await this.usersService.update(user.id, {
-      isTfaEnabled: false,
-      tfaSecret: '',
-    });
+    user.isTfaEnabled = false;
+    user.tfaSecret = '';
+
+    await this.usersRepository.save(user);
+
     this.logger.log(`TFA disabled for userId=${user.id}`, AuthService.name);
+
     this.eventBus.emit(AppEvents.USER_TFA_DISABLED, {
       userId: user.id,
       email,
@@ -405,7 +527,11 @@ export class AuthService {
 
   // Called during login when isTfaEnabled = true
   async signInWithTfa(user: { id: string; email: string }, tfaToken: string) {
-    const fullUser = await this.usersService.findByIdWithTfaSecret(user.id);
+    const fullUser = await this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.tfaSecret')
+      .where('user.id = :id', { id: user.id })
+      .getOne();
 
     if (!fullUser?.tfaSecret) {
       throw new UnauthorizedException(
@@ -429,12 +555,12 @@ export class AuthService {
     }
 
     // TFA passed — issue real tokens
-    return this.signIn(user);
+    return this.signIn(fullUser.id, fullUser.username);
   }
 
   async logout(userId: string): Promise<void> {
-    await this.usersService.update(userId, { currentJwtToken: '' });
-    this.logger.log(`User logged out userId=${userId}`, AuthService.name);
+    await this.usersRepository.update(userId, { currentJwtToken: '' });
+    this.logger.log(`User logged out userId=${userId}`);
     this.eventBus.emit(AppEvents.USER_LOGOUT, { userId });
   }
 }

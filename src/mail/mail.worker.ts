@@ -2,42 +2,50 @@ import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { AppEvents } from '../events/events.enum';
 import { MailService } from './mail.service';
-import { LoggingService } from 'src/logging/logging.service';
+import { LoggingService } from '../logging/logging.service';
 
 export interface MailJobData {
   email: string;
   username?: string;
+  reseturlLink?: string;
 }
 
-// 1. WorkerHost should receive the generic type for the Job data
-@Processor('mail')
-export class MailConsumer extends WorkerHost {
+@Processor('mailQueue')
+export class MailWorker extends WorkerHost {
   constructor(
     private readonly mailService: MailService,
     private readonly logger: LoggingService,
   ) {
     super();
-    this.logger.child({ context: MailConsumer.name });
+    this.logger.child({ context: MailWorker.name });
   }
 
   async process(job: Job<MailJobData, void, AppEvents>): Promise<any> {
     switch (job.name) {
       case AppEvents.USER_SIGNUP: {
-        await this.mailService.handleUserSignupEvent({
+        await this.mailService.sendUserSignup({
           email: job.data.email,
           username: job.data.username,
         });
         break;
       }
       case AppEvents.USER_TFA_ENABLED: {
-        await this.mailService.handleUserTfaEnabledEvent({
+        await this.mailService.sendUserTfaEnabled({
           email: job.data.email,
         });
         break;
       }
       case AppEvents.USER_TFA_DISABLED: {
-        await this.mailService.handleUserTfaDisabledEvent({
+        await this.mailService.sendUserTfaDisabled({
           email: job.data.email,
+        });
+        break;
+      }
+      case AppEvents.USER_FORGETPASSWORD: {
+        await this.mailService.sendResetPasswordLink({
+          email: job.data.email,
+          reseturlLink: job.data.reseturlLink as string,
+          username: job.data.username as string,
         });
         break;
       }

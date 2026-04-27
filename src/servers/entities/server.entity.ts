@@ -1,7 +1,8 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Role } from '../../roles/entities/role.entity';
 import { Channel } from '../../channels/entities/channel.entity';
-import { ServerMember } from '../../users/entities/server-member.entity';
+import { ServerMember } from './server-member.entity';
+import { Invitation } from 'src/invitations/entities/invitation.entity';
 
 @Entity('servers')
 export class Server {
@@ -17,6 +18,9 @@ export class Server {
   @Column({ default: false })
   isPublic!: boolean;
 
+  @Column({ default: '' })
+  icon!: string;
+
   @Column({ nullable: true })
   description?: string;
 
@@ -26,10 +30,6 @@ export class Server {
   @Column('simple-array', { nullable: true })
   tags?: string[];
 
-  // Assigns a random UUID for any existing rows in the DB so migration doesn't crash
-  @Column({ unique: true })
-  inviteCode?: string;
-
   @OneToMany(() => Role, (role) => role.server)
   roles!: Role[];
 
@@ -38,4 +38,7 @@ export class Server {
 
   @OneToMany(() => ServerMember, (member) => member.server)
   members!: ServerMember[];
+
+  @OneToMany(() => Invitation, (invitation) => invitation.server)
+  invitations!: Invitation[];
 }
