@@ -119,11 +119,8 @@ import Redis from 'ioredis';
     MessagesModule,
     NotificationsModule,
     PresenceModule,
-<<<<<<< HEAD
     DevModule,
-=======
     InvitationsModule,
->>>>>>> dev_omar
   ],
   controllers: [AppController],
   providers: [
