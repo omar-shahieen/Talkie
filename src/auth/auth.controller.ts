@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import type { Response, Request } from 'express';
 import { AuthService } from './auth.service';
-import { Cookies } from './decorators/cookie.decorator';
+import { Cookies } from '../common/decorators/cookie.decorator';
 import { Public } from './decorators/public.decorator';
 import { LocalAuthGuard } from './guards/auth-local.guard';
 import { SignInDto } from './dtos/SignInDto';
@@ -29,7 +29,10 @@ import { ResetPasswordDto } from './dtos/resetPassword.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly logger: LoggingService,
+  ) {}
 
   @Public()
   @HttpCode(HttpStatus.OK)
@@ -40,7 +43,11 @@ export class AuthController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-
+    if (req.user.isTfaEnabled) {
+      const tfaLoginToken = await this.authService.createTfaLoginToken(
+        req.user.id,
+        req.user.email,
+      );
       return { tfaRequired: true, tfaLoginToken };
     }
 

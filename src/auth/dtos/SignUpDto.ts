@@ -1,6 +1,6 @@
 import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 import { Exclude } from 'class-transformer';
-import { Match } from '../decorators/match.decorator';
+import { Match } from '../../common/decorators/match.decorator';
 
 export class SignUpDto {
   @IsString()

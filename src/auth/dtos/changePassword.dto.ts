@@ -1,7 +1,7 @@
 import { Exclude } from 'class-transformer';
 import { IsString, MinLength } from 'class-validator';
-import { Match } from '../decorators/match.decorator';
-import { NotMatch } from '../decorators/NotMatch.decorator';
+import { Match } from '../../common/decorators/match.decorator';
+import { NotMatch } from '../../common/decorators/NotMatch.decorator';
 
 export class ChangePasswordDto {
   @IsString()

@@ -11,16 +11,16 @@ import { Channel, ChannelType } from '../channels/entities/channel.entity';
 import { MessageAttachment } from './entities/message-attachment.entity';
 import { MessageReaction } from './entities/message-reaction.entity';
 import { ChannelMember } from '../channels/entities/channel-member.entity';
-import { ServerMember } from '../users/entities/server-member.entity';
 import { CreateMessageDto } from './dtos/create-message.dto';
 import { UpdateMessageDto } from './dtos/update-message.dto';
 import { MessagePaginationDto } from './dtos/pagination.dto';
 import { MessageReactionDto } from './dtos/reaction.dto';
 import { SearchMessagesDto } from './dtos/search-messages.dto';
 import { AppEvents } from '../events/events.enum';
-import { EventBusService } from '../events/event-bus.service';
 import { LoggingService } from '../logging/logging.service';
 import { MessageRetentionQueueService } from './message-retention.queue';
+import { EventBusService } from 'src/events/eventBus.service';
+import { ServerMember } from 'src/servers/entities/server-member.entity';
 
 interface ElasticHit {
   _id: string;
@@ -133,7 +133,7 @@ export class MessagesService {
 
     const serverMember = await this.serverMembersRepository.findOneBy({
       serverId: channel.serverId,
-      userId,
+      memberId: userId,
     });
     if (!serverMember) {
       throw new ForbiddenException('You are not a member of this server');

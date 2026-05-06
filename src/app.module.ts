@@ -8,8 +8,6 @@ import { AccessControlModule } from './access-control/access-control.module';
 import { LoggingModule } from './logging/logging.module';
 import { CacheInterceptor, CacheModule } from '@nestjs/cache-manager';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RolesModule } from './roles/roles.module';
 import { ChannelsModule } from './channels/channels.module';
 import { ServersModule } from './servers/servers.module';
@@ -23,11 +21,13 @@ import { ContextMiddleware } from './common/middleware/context.middleware';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PresenceModule } from './presence/presence.module';
 import { BullModule } from '@nestjs/bullmq';
-import { DevModule } from './dev/dev.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { InvitationsModule } from './invitations/invitations.module';
+import { FriendsModule } from './friends/friends.module';
 import Redis from 'ioredis';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   imports: [
@@ -36,6 +36,7 @@ import Redis from 'ioredis';
       isGlobal: true,
       ttl: 5000, // in ms
     }),
+
     ConfigModule.forRoot({ isGlobal: true }),
 
     TypeOrmModule.forRootAsync({
@@ -119,8 +120,8 @@ import Redis from 'ioredis';
     MessagesModule,
     NotificationsModule,
     PresenceModule,
-    DevModule,
     InvitationsModule,
+    FriendsModule,
   ],
   controllers: [AppController],
   providers: [

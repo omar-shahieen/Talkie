@@ -1,17 +1,45 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Delete, Get, Patch, Query } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { RequireServerPermissions } from '../access-control/server-permissions/requireServerPermission.decorator';
-import { Permission } from '../access-control/server-permissions/serverPermissions.constants';
-import { AuthJwtGuard } from '../auth/guards/auth-jwt.guard';
-import { ServerPermissionsGuard } from '../access-control/server-permissions/serverPermissions.guard';
+
+import { type AuthenticatedUser } from 'src/auth/types/authenticated-user.type';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { UpdateUserDto } from './dtos/updateUser.dto';
+import { SearchUsersDto } from './dtos/search-users.dto';
+import { Throttle } from '@nestjs/throttler';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { RequireAppRole } from 'src/access-control/app-permissions/requireAppRole.decorator';
+import { AppRole } from './entities/user.entity';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
   @Get()
-  @UseGuards(AuthJwtGuard, ServerPermissionsGuard)
-  @RequireServerPermissions(Permission.Administrator, Permission.SendMessages)
-  getAll() {
-    return this.usersService.findAll();
+  @RequireAppRole(AppRole.ADMIN)
+  getAll(@Query() q: PaginationDto) {
+    return this.usersService.findAll(q);
+  }
+
+  @Get('me')
+  getMe(@CurrentUser() user: AuthenticatedUser) {
+    return this.usersService.getProfile(user.id);
+  }
+  @Patch('me')
+  upadteMe(@CurrentUser() user: AuthenticatedUser, dto: UpdateUserDto) {
+    return this.usersService.updateProfile(user.id, dto);
+  }
+  @Delete('me')
+  deleteMe(@CurrentUser() user: AuthenticatedUser) {
+    return this.usersService.deleteProfile(user.id);
+  }
+
+  // GET /users/search?q=alice
+  @Get('search')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  searchUsers(
+    @Query() query: SearchUsersDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.usersService.searchByUsername(query.q, user.id);
   }
 }

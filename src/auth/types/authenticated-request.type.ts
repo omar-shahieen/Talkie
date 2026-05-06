@@ -1,5 +1,6 @@
 import type { Request } from 'express';
+import { AuthenticatedUser } from './authenticated-user.type';
 
 export type AuthenticatedRequest = Request & {
-  user: { id: string; email: string; isTfaEnabled?: boolean };
+  user: AuthenticatedUser;
 };

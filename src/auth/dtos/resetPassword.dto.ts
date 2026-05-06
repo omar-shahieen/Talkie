@@ -1,6 +1,6 @@
 import { Exclude } from 'class-transformer';
 import { IsOptional, IsString, MinLength } from 'class-validator';
-import { Match } from '../decorators/match.decorator';
+import { Match } from '../../common/decorators/match.decorator';
 
 export class ResetPasswordDto {
   @IsString()

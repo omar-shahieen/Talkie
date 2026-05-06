@@ -17,8 +17,8 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ nullable: true })
-  firstName?: string;
+  @Column()
+  firstName!: string;
 
   @Column({ nullable: true })
   lastName?: string;
@@ -28,6 +28,9 @@ export class User {
 
   @Column({ unique: true })
   username!: string;
+
+  @Column({ nullable: true })
+  avatar!: string;
 
   @Column({ nullable: true, select: false }) // never returned in queries by default
   password?: string;

@@ -1,9 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { LoggingService } from '../logging/logging.service';
 import { ServerMember } from '../servers/entities/server-member.entity';
+import { UpdateUserDto } from './dtos/updateUser.dto';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { APIFeatures } from 'src/common/helpers/api-features.helper';
+import { PaginatedResult } from 'src/common/dto/paginated-result.dto';
 
 @Injectable()
 export class UsersService {
@@ -25,8 +29,21 @@ export class UsersService {
     return `${maskedName}@${domain}`;
   }
 
-  async findAll(): Promise<User[]> {
-    return this.usersRepository.find();
+  private async findUserOrThrow(userId: string) {
+    const user = await this.usersRepository.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
+
+  async findAll(q: PaginationDto) {
+    const [data, count] = await new APIFeatures(this.usersRepository, q)
+      .filter()
+      .sorting()
+      .limit()
+      .pagination()
+      .getManyAndCount();
+
+    return new PaginatedResult(data, count, q.page, q.limit);
   }
 
   async create(user: Partial<User>) {
@@ -78,5 +95,34 @@ export class UsersService {
       });
       throw error;
     }
+  }
+
+  async getProfile(userId: string) {
+    const user = await this.findUserOrThrow(userId);
+    return user;
+  }
+  async updateProfile(userId: string, dto: UpdateUserDto) {
+    const user = await this.getProfile(userId);
+
+    await this.usersRepository.update(userId, dto); // test this
+
+    return user;
+  }
+  async deleteProfile(userId: string) {
+    const user = await this.findUserOrThrow(userId);
+
+    await this.usersRepository.softRemove(user);
+
+    return { message: 'User deleted successfully' };
+  }
+
+  async searchByUsername(q: string, requesterId: string) {
+    return this.usersRepository
+      .createQueryBuilder('user')
+      .select(['user.id', 'user.username', 'user.avatar'])
+      .where('u.username ILIKE :q', { q: `${q}%` })
+      .andWhere('u.id != :requesterId', { requesterId }) // exclude self
+      .limit(20)
+      .getMany();
   }
 }
