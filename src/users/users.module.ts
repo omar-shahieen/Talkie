@@ -9,7 +9,7 @@ import { ServerMember } from '../servers/entities/server-member.entity';
 @Module({
   imports: [TypeOrmModule.forFeature([User, ServerMember])],
   providers: [UsersService, UserSubscriber],
-  exports: [UsersService],
   controllers: [UsersController],
+  exports: [UsersService],
 })
 export class UsersModule {}

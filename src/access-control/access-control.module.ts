@@ -15,6 +15,16 @@ import { User } from 'src/users/entities/user.entity';
 
 @Global()
 @Module({
+  imports: [
+    TypeOrmModule.forFeature([
+      ServerMember,
+      Server,
+      Channel,
+      Role,
+      ChannelOverwrite,
+      User,
+    ]),
+  ],
   providers: [
     ServerPermissionsService,
     AppPermissionsService,
@@ -27,17 +37,7 @@ import { User } from 'src/users/entities/user.entity';
       useClass: AppPermissionsGuard,
     },
   ],
-  exports: [ServerPermissionsService],
-  imports: [
-    TypeOrmModule.forFeature([
-      ServerMember,
-      Server,
-      Channel,
-      Role,
-      ChannelOverwrite,
-      User,
-    ]),
-  ],
   controllers: [AccessControlController],
+  exports: [ServerPermissionsService, AppPermissionsService],
 })
 export class AccessControlModule {}

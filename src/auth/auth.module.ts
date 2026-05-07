@@ -46,7 +46,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       useClass: AuthJwtGuard,
     },
     AuthService,
-    AuthJwtGuard,
     AuthGoogleGuard,
     LocalStrategy,
     JwtStrategy,

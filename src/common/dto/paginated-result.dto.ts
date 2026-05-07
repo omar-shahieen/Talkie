@@ -12,7 +12,7 @@ export class PaginatedResult<T> {
     isEmpty: boolean;
   };
 
-  constructor(data: T[], total: number, page: number, limit: number) {
+  constructor(data: T[], total: number, page: number = 1, limit: number = 10) {
     const totalPages = Math.ceil(total / limit);
     this.data = data;
     this.meta = {

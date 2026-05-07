@@ -8,7 +8,6 @@ import { MailWorker } from './mail.worker';
 import { MailQueueListener } from './mail.listner';
 import { BullModule } from '@nestjs/bullmq';
 
-@Global()
 @Module({
   imports: [
     ConfigModule,
