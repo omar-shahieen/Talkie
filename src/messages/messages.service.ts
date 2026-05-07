@@ -1,9 +1,5 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, forwardRef } from '@nestjs/common';
+
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Message } from './entities/message.entity';
@@ -21,6 +17,11 @@ import { LoggingService } from '../logging/logging.service';
 import { MessageRetentionQueueService } from './message-retention.queue';
 import { EventBusService } from 'src/events/eventBus.service';
 import { ServerMember } from 'src/servers/entities/server-member.entity';
+import {
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from 'src/common/exceptions/domain.exception';
 
 interface ElasticHit {
   _id: string;
@@ -44,6 +45,7 @@ export class MessagesService {
     private readonly dataSource: DataSource,
     private readonly eventBus: EventBusService,
     private readonly logger: LoggingService,
+    @Inject(forwardRef(() => MessageRetentionQueueService))
     private readonly messageRetentionQueue: MessageRetentionQueueService,
   ) {
     this.logger.child({ context: MessagesService.name });
@@ -54,7 +56,15 @@ export class MessagesService {
       id: dto.channelId,
     });
     if (!channel) {
-      throw new NotFoundException('Channel not found');
+      this.logger.warn(
+        `Channel not found for message creation channelId=${dto.channelId} authorId=${authorId}`,
+        MessagesService.name,
+      );
+      throw new NotFoundException('channel', dto.channelId, {
+        channelId: dto.channelId,
+        message:
+          'The target channel does not exist. Please verify the channel ID.',
+      });
     }
 
     const parent = dto.parentMessageId
@@ -62,11 +72,25 @@ export class MessagesService {
       : null;
 
     if (dto.parentMessageId && !parent) {
-      throw new NotFoundException('Parent message not found');
+      this.logger.warn(
+        `Parent message not found for reply messageId=${dto.parentMessageId} channelId=${dto.channelId}`,
+        MessagesService.name,
+      );
+      throw new NotFoundException('message', dto.parentMessageId, {
+        messageId: dto.parentMessageId,
+        message:
+          'The parent message for this reply does not exist or has been deleted.',
+      });
     }
 
     if (parent && parent.channelId !== dto.channelId) {
-      throw new BadRequestException('Reply parent must be in the same channel');
+      this.logger.warn(
+        `Message reply validation failed: parent in different channel parentChannelId=${parent.channelId} targetChannelId=${dto.channelId}`,
+        MessagesService.name,
+      );
+      throw new BadRequestException(
+        'You cannot reply to a message from a different channel. The parent message must be in the same channel.',
+      );
     }
 
     const threadRootMessageId =
@@ -113,7 +137,10 @@ export class MessagesService {
   ): Promise<void> {
     const channel = await this.channelsRepository.findOneBy({ id: channelId });
     if (!channel) {
-      throw new NotFoundException('Channel not found');
+      throw new NotFoundException('channel', channelId, {
+        channelId,
+        message: 'This channel does not exist or has been deleted.',
+      });
     }
 
     if (channel.type === ChannelType.DM) {
@@ -122,13 +149,25 @@ export class MessagesService {
         userId,
       });
       if (!dmMember) {
-        throw new ForbiddenException('You are not a member of this DM channel');
+        this.logger.warn(
+          `DM access denied: user not a member channelId=${channelId} userId=${userId}`,
+          MessagesService.name,
+        );
+        throw new ForbiddenException(
+          'You do not have access to this direct message channel. Only participants can upload messages.',
+        );
       }
       return;
     }
 
     if (!channel.serverId) {
-      throw new BadRequestException('Server channel is missing serverId');
+      this.logger.error(
+        `Server channel missing serverId channelId=${channelId}`,
+        MessagesService.name,
+      );
+      throw new BadRequestException(
+        'This channel configuration is invalid. The server ID is missing. Contact support.',
+      );
     }
 
     const serverMember = await this.serverMembersRepository.findOneBy({
@@ -136,18 +175,37 @@ export class MessagesService {
       memberId: userId,
     });
     if (!serverMember) {
-      throw new ForbiddenException('You are not a member of this server');
+      this.logger.warn(
+        `Server access denied: user not a member serverId=${channel.serverId} userId=${userId}`,
+        MessagesService.name,
+      );
+      throw new ForbiddenException(
+        'You are not a member of the server containing this channel. Join the server first to send messages.',
+      );
     }
   }
 
   async update(id: string, dto: UpdateMessageDto, requesterId: string) {
     const message = await this.messagesRepository.findOneBy({ id });
     if (!message || message.isDeleted) {
-      throw new NotFoundException('Message not found');
+      this.logger.warn(
+        `Message update failed: message not found messageId=${id}`,
+        MessagesService.name,
+      );
+      throw new NotFoundException('message', id, {
+        messageId: id,
+        message: 'This message does not exist or has been deleted.',
+      });
     }
 
     if (message.authorId !== requesterId) {
-      throw new ForbiddenException('Only the author can edit this message');
+      this.logger.warn(
+        `Message update failed: unauthorized user requesterId=${requesterId} messageAuthorId=${message.authorId}`,
+        MessagesService.name,
+      );
+      throw new ForbiddenException(
+        'You can only edit your own messages. Only the message author can make changes.',
+      );
     }
 
     message.content = dto.content;
@@ -175,11 +233,24 @@ export class MessagesService {
   async remove(id: string, requesterId: string) {
     const message = await this.messagesRepository.findOneBy({ id });
     if (!message) {
-      throw new NotFoundException('Message not found');
+      this.logger.warn(
+        `Message deletion failed: message not found messageId=${id}`,
+        MessagesService.name,
+      );
+      throw new NotFoundException('message', id, {
+        messageId: id,
+        message: 'This message does not exist or has been deleted.',
+      });
     }
 
     if (message.authorId !== requesterId) {
-      throw new ForbiddenException('Only the author can delete this message');
+      this.logger.warn(
+        `Message deletion failed: unauthorized user requesterId=${requesterId} messageAuthorId=${message.authorId}`,
+        MessagesService.name,
+      );
+      throw new ForbiddenException(
+        'You can only delete your own messages. Only the message author can remove it.',
+      );
     }
 
     if (message.isDeleted) {
@@ -226,7 +297,14 @@ export class MessagesService {
   async listChannelMessages(channelId: string, query: MessagePaginationDto) {
     const channel = await this.channelsRepository.findOneBy({ id: channelId });
     if (!channel) {
-      throw new NotFoundException('Channel not found');
+      this.logger.warn(
+        `List channel messages failed: channel not found channelId=${channelId}`,
+        MessagesService.name,
+      );
+      throw new NotFoundException('channel', channelId, {
+        channelId,
+        message: 'This channel does not exist or has been deleted.',
+      });
     }
 
     const limit = query.limit ?? 30;
@@ -262,7 +340,14 @@ export class MessagesService {
   async listReplies(messageId: string, query: MessagePaginationDto) {
     const parent = await this.messagesRepository.findOneBy({ id: messageId });
     if (!parent) {
-      throw new NotFoundException('Parent message not found');
+      this.logger.warn(
+        `List message replies failed: parent message not found messageId=${messageId}`,
+        MessagesService.name,
+      );
+      throw new NotFoundException('message', messageId, {
+        messageId,
+        message: 'This message does not exist or has been deleted.',
+      });
     }
 
     const limit = query.limit ?? 30;
@@ -298,7 +383,15 @@ export class MessagesService {
   async listThread(rootMessageId: string, query: MessagePaginationDto) {
     const root = await this.messagesRepository.findOneBy({ id: rootMessageId });
     if (!root) {
-      throw new NotFoundException('Thread root message not found');
+      this.logger.warn(
+        `List thread failed: root message not found messageId=${rootMessageId}`,
+        MessagesService.name,
+      );
+      throw new NotFoundException('message', rootMessageId, {
+        messageId: rootMessageId,
+        message:
+          'The root message for this thread does not exist or has been deleted.',
+      });
     }
 
     const limit = query.limit ?? 30;
@@ -341,7 +434,14 @@ export class MessagesService {
   ) {
     const message = await this.messagesRepository.findOneBy({ id: messageId });
     if (!message || message.isDeleted) {
-      throw new NotFoundException('Message not found');
+      this.logger.warn(
+        `Add reaction failed: message not found messageId=${messageId} userId=${userId} emoji=${dto.emoji}`,
+        MessagesService.name,
+      );
+      throw new NotFoundException('message', messageId, {
+        messageId,
+        message: 'This message does not exist or has been deleted.',
+      });
     }
 
     const exists = await this.reactionsRepository.findOneBy({
@@ -378,7 +478,14 @@ export class MessagesService {
   ) {
     const message = await this.messagesRepository.findOneBy({ id: messageId });
     if (!message || message.isDeleted) {
-      throw new NotFoundException('Message not found');
+      this.logger.warn(
+        `Remove reaction failed: message not found messageId=${messageId} userId=${userId} emoji=${dto.emoji}`,
+        MessagesService.name,
+      );
+      throw new NotFoundException('message', messageId, {
+        messageId,
+        message: 'This message does not exist or has been deleted.',
+      });
     }
 
     const reaction = await this.reactionsRepository.findOneBy({
@@ -387,7 +494,16 @@ export class MessagesService {
       emoji: dto.emoji,
     });
     if (!reaction) {
-      throw new NotFoundException('Reaction not found');
+      this.logger.warn(
+        `Remove reaction failed: reaction not found messageId=${messageId} userId=${userId} emoji=${dto.emoji}`,
+        MessagesService.name,
+      );
+      throw new NotFoundException('reaction', `${messageId}:${dto.emoji}`, {
+        messageId,
+        userId,
+        emoji: dto.emoji,
+        message: 'This reaction does not exist or has already been removed.',
+      });
     }
 
     await this.reactionsRepository.remove(reaction);

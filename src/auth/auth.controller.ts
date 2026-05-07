@@ -21,7 +21,6 @@ import { SignInDto } from './dtos/SignInDto';
 import { SignUpDto } from './dtos/SignUpDto';
 import { VerifyTfaDto } from './dtos/tfa.dto';
 import { AuthGoogleGuard } from './guards/auth-google.guard';
-import { LoggingService } from '../logging/logging.service';
 import { type AuthenticatedRequest } from './types/authenticated-request.type';
 import { ChangePasswordDto } from './dtos/changePassword.dto';
 import { ForgetPasswordDto } from './dtos/forgetPassowrd.dto';
@@ -29,10 +28,7 @@ import { ResetPasswordDto } from './dtos/resetPassword.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-    private readonly logger: LoggingService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   @Public()
   @HttpCode(HttpStatus.OK)

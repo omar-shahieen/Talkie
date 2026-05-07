@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
@@ -8,6 +8,7 @@ import { Permission } from '../access-control/server-permissions/serverPermissio
 import { ChannelMember } from './entities/channel-member.entity';
 import { ReadState } from './entities/readState.entity';
 import { ServerPermissionsService } from 'src/access-control/server-permissions/serverPermissions.service';
+import { NotFoundException } from 'src/common/exceptions/domain.exception';
 
 @Injectable()
 export class ChannelsService {
@@ -32,7 +33,10 @@ export class ChannelsService {
   async findOne(id: string): Promise<Channel> {
     const channel = await this.channelsRepository.findOneBy({ id });
     if (!channel) {
-      throw new NotFoundException('Channel not found');
+      throw new NotFoundException('channel', id, {
+        channelId: id,
+        message: 'This channel does not exist or has been deleted.',
+      });
     }
     return channel;
   }

@@ -1,53 +1,56 @@
+// common/interceptors/logging.interceptor.ts
 import {
+  CallHandler,
+  ExecutionContext,
   Injectable,
   NestInterceptor,
-  ExecutionContext,
-  CallHandler,
 } from '@nestjs/common';
 import { Observable, throwError } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
-import { AsyncContext } from '../context/async-context.service';
+import { Request, Response } from 'express';
+import { ClsService } from 'nestjs-cls';
 import { LoggingService } from '../../logging/logging.service';
-import { Request } from 'express';
+import { MyClsStore } from '../interface/cls-store.interface';
+import { AuthenticatedRequest } from 'src/auth/types/authenticated-request.type';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
   constructor(
-    private readonly asyncContext: AsyncContext,
+    private readonly cls: ClsService<MyClsStore>,
     private readonly logger: LoggingService,
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    const req = context.switchToHttp().getRequest<Request>();
+    const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const res = context.switchToHttp().getResponse<Response>();
     const start = Date.now();
 
-    const meta = {
+    const baseMeta = {
       method: req.method,
       url: req.url,
-      correlationId: this.asyncContext.get<string>('correlationId'),
-      userId: this.asyncContext.get<string | number>('userId'),
+      correlationId: this.cls.get<string>('correlationId'),
+      userId: this.cls.get<string>('userId'),
+      ip: this.cls.get<string>('ip'),
     };
 
-    const asContext = (extra?: Record<string, unknown>) =>
-      JSON.stringify({ ...meta, ...extra });
-
-    this.logger.log('-> ' + req.method + ' ' + req.url, asContext());
+    this.logger.log(`→ ${req.method} ${req.url}`, baseMeta);
 
     return next.handle().pipe(
       tap(() => {
-        const ms = Date.now() - start;
-        this.logger.log(
-          '<- ' + req.method + ' ' + req.url + ' ' + ms + 'ms',
-          asContext({ ms }),
-        );
+        this.logger.log(`← ${req.method} ${req.url}`, {
+          ...baseMeta,
+          statusCode: res.statusCode,
+          ms: Date.now() - start,
+        });
       }),
       catchError((err: unknown) => {
         const ms = Date.now() - start;
-        this.logger.debug(
-          'x ' + req.method + ' ' + req.url + ' ' + ms + 'ms',
-          asContext({ ms }),
-        );
-        return throwError(() => err);
+
+        if (err && typeof err === 'object') {
+          (err as { ms?: number }).ms = ms;
+        }
+
+        return throwError(() => err); // re-throw so the filter still catches it
       }),
     );
   }

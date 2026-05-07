@@ -13,7 +13,7 @@ export class ChangePasswordDto {
   newPassword!: string;
 
   @IsString()
-  @Match('password')
   @Exclude() // Excludes it when transforming to a plain object
+  @Match('newPassword')
   newPasswordConfirm!: string;
 }

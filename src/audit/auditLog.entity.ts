@@ -1,4 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity('auditLog')
 export class AuditLog {
@@ -10,4 +15,7 @@ export class AuditLog {
 
   @Column({ type: 'jsonb' })
   payload!: Record<string, unknown>;
+
+  @CreateDateColumn()
+  createdAt!: Date;
 }

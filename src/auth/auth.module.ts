@@ -3,7 +3,6 @@ import { AuthService } from './auth.service';
 import { JwtModule } from '@nestjs/jwt';
 import { jwtConstants } from './constants';
 import { UsersModule } from '../users/users.module';
-import { APP_GUARD } from '@nestjs/core';
 import { AuthJwtGuard } from './guards/auth-jwt.guard';
 import { Module, Global } from '@nestjs/common';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -41,10 +40,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
   ],
   controllers: [AuthController],
   providers: [
-    {
-      provide: APP_GUARD,
-      useClass: AuthJwtGuard,
-    },
+    AuthJwtGuard,
     AuthService,
     AuthGoogleGuard,
     LocalStrategy,

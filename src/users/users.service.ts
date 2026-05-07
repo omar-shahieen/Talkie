@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
@@ -8,6 +8,7 @@ import { UpdateUserDto } from './dtos/updateUser.dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { APIFeatures } from 'src/common/helpers/api-features.helper';
 import { PaginatedResult } from 'src/common/dto/paginated-result.dto';
+import { NotFoundException } from 'src/common/exceptions/domain.exception';
 
 @Injectable()
 export class UsersService {
@@ -31,7 +32,11 @@ export class UsersService {
 
   private async findUserOrThrow(userId: string) {
     const user = await this.usersRepository.findOneBy({ id: userId });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user)
+      throw new NotFoundException('user', userId, {
+        userId,
+        message: 'User account not found or has been deleted.',
+      });
     return user;
   }
 

@@ -1,4 +1,4 @@
-import { MiddlewareConsumer, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuditModule } from './audit/audit.module';
@@ -16,8 +16,6 @@ import { EventsModule } from './events/events.module';
 import { MailModule } from './mail/mail.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
-import { AsyncContext } from './common/context/async-context.service';
-import { ContextMiddleware } from './common/middleware/context.middleware';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PresenceModule } from './presence/presence.module';
 import { BullModule } from '@nestjs/bullmq';
@@ -28,6 +26,12 @@ import { FriendsModule } from './friends/friends.module';
 import Redis from 'ioredis';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ClsModule } from 'nestjs-cls';
+import { AuthJwtGuard } from './auth/guards/auth-jwt.guard';
+import { ServerPermissionsGuard } from './access-control/server-permissions/serverPermissions.guard';
+import { AppPermissionsGuard } from './access-control/app-permissions/appPermissions.guard';
+import { CorrelationIdInterceptor } from './common/interceptors/correlation-id.interceptor';
+import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
 @Module({
   imports: [
@@ -103,6 +107,16 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         ),
       }),
     }),
+
+    // Register the ClsModule,
+    ClsModule.forRoot({
+      global: true,
+      middleware: {
+        // automatically mount the
+        // ClsMiddleware for all routes
+        mount: true,
+      },
+    }),
     // GLOBAL MODULES
     AuthModule,
     EventsModule,
@@ -126,15 +140,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
   controllers: [AppController],
   providers: [
     AppService,
-    { provide: APP_INTERCEPTOR, useClass: CacheInterceptor },
-    { provide: APP_FILTER, useClass: GlobalExceptionFilter },
-    { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
-    AsyncContext,
+    { provide: APP_GUARD, useClass: AuthJwtGuard },
+    { provide: APP_GUARD, useClass: ServerPermissionsGuard },
+    { provide: APP_GUARD, useClass: AppPermissionsGuard },
+    { provide: APP_INTERCEPTOR, useClass: CorrelationIdInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: CacheInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
+    { provide: APP_FILTER, useClass: GlobalExceptionFilter },
   ],
 })
-export class AppModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(ContextMiddleware).forRoutes('*');
-  }
-}
+export class AppModule {}

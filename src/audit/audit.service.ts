@@ -17,14 +17,13 @@ export class AuditService {
     return log;
   }
 
-  // async getLogs({ action, limit = 50 }: { action?: string; limit?: number }) {
-  //   const filter = action ? { action } : {};
-  //   return this.auditLogsRepository
-  //     .find({
-  //       where: { filter },
-  //     })
-  //     .sort({ createdAt: -1 })
-  //     .limit(limit)
-  //     .lean();
-  // }
+  async getLogs({ action, limit = 50 }: { action?: string; limit?: number }) {
+    return this.auditLogsRepository.find({
+      where: { action },
+      order: {
+        createdAt: 'DESC',
+      },
+      take: limit,
+    });
+  }
 }

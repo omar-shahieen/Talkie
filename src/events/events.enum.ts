@@ -19,4 +19,6 @@ export enum AppEvents {
   TYPING_STARTED = 'channel.typing.started',
   TYPING_STOPPED = 'channel.typing.stopped',
   PRESENCE_UPDATED = 'presence.updated',
+
+  SECURITY_ERROR = 'error.security',
 }

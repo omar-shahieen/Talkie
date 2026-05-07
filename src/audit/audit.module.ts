@@ -7,11 +7,13 @@ import { BullModule } from '@nestjs/bullmq';
 import { AuditWorker } from './auditLogger.worker';
 import { AuditQueueListener } from './auditQueuelistener';
 
+export const AUDIT_QUEUE: string = 'audit-events';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([AuditLog]),
     BullModule.registerQueue({
-      name: 'auditQueue',
+      name: AUDIT_QUEUE,
     }),
   ],
   providers: [AuditService, AuditQueueListener, AuditWorker],

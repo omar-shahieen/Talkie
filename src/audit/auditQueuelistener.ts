@@ -3,10 +3,11 @@ import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { Queue } from 'bullmq';
 import { AppEvents } from 'src/events/events.enum';
+import { AUDIT_QUEUE } from './audit.module';
 
 @Injectable()
 export class AuditQueueListener {
-  constructor(@InjectQueue('auditQueue') private auditQueue: Queue) {}
+  constructor(@InjectQueue(AUDIT_QUEUE) private auditQueue: Queue) {}
 
   @OnEvent(Object.values(AppEvents))
   async handleAppEvents(payload: {

@@ -7,11 +7,14 @@ import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import express from 'express';
 import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { ValidationException } from './common/exceptions/domain.exception';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
+
   app.enableCors({ origin: true, credentials: true });
 
   const uploadsDir = join(process.cwd(), 'uploads');
+
   if (!existsSync(uploadsDir)) {
     mkdirSync(uploadsDir, { recursive: true });
   }
@@ -20,28 +23,51 @@ async function bootstrap() {
   // replace winston logger with NestJS LoggerService
   const logger = app.get(LoggingService);
   app.useLogger(logger);
+
   // Morgan for request logging
   app.use(
     morgan(':method :url :status :res[content-length] - :response-time ms', {
       stream: logger.httpStream(),
     }),
   );
+
   // cookie parser
   app.use(cookieParser());
 
   // validation
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
-      transform: true,
       transformOptions: {
         enableImplicitConversion: true,
       },
     }),
   );
 
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      disableErrorMessages: process.env.NODE_ENV == 'development',
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+      exceptionFactory: (errors) => {
+        const structured = errors.reduce<Record<string, string[]>>(
+          (acc, err) => {
+            acc[err.property] = Object.values(err.constraints ?? {});
+            return acc;
+          },
+          {},
+        );
+        return new ValidationException(structured);
+      },
+    }),
+  );
   // Catch unhandled async errors that escape the NestJS pipeline
   process.on('unhandledRejection', (reason) => {
     logger.error('Unhandled rejection', String(reason));
@@ -51,6 +77,7 @@ async function bootstrap() {
     logger.error('Uncaught exception', err.stack);
     process.exit(1);
   });
+
   await app.listen(process.env.PORT ?? 3000);
 
   logger.log(

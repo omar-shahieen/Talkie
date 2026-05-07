@@ -6,7 +6,7 @@ export class EventBusService {
   constructor(private readonly emitter: EventEmitter2) {}
 
   emit(event: string, payload: Record<string, unknown>): void {
-    this.emitter.emit(event, { event, ...payload });
+    this.emitter.emit(event, { action: event, ...payload });
   }
   //for async workflows — waits for all handlers to resolve
   async emitAsync(

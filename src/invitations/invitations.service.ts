@@ -1,13 +1,14 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Invitation } from './entities/invitation.entity';
 import { DataSource, Repository } from 'typeorm';
 import { ServerMember } from '../servers/entities/server-member.entity';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { LoggingService } from '../logging/logging.service';
+import {
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from 'src/common/exceptions/domain.exception';
 
 @Injectable()
 export class InvitationsService {
@@ -17,14 +18,27 @@ export class InvitationsService {
     @InjectRepository(Invitation)
     private readonly invitationsRepository: Repository<Invitation>,
     @InjectDataSource() private dataSource: DataSource,
+    private readonly logger: LoggingService,
   ) {}
 
   private validateInvite(invite: Invitation): void {
     if (invite.expiresAt && invite.expiresAt <= new Date()) {
-      throw new ForbiddenException('invite code expired');
+      this.logger.warn(
+        `Invite code validation failed: code expired inviteCode=${invite.inviteCode} expiresAt=${invite.expiresAt.toISOString()}`,
+        InvitationsService.name,
+      );
+      throw new ForbiddenException(
+        'This invite code has expired and can no longer be used. Request a new one from the server owner.',
+      );
     }
     if (invite.maxUses && invite.maxUses <= invite.currentUses) {
-      throw new ForbiddenException('invite code uses limit is reached');
+      this.logger.warn(
+        `Invite code validation failed: usage limit reached inviteCode=${invite.inviteCode} maxUses=${invite.maxUses} currentUses=${invite.currentUses}`,
+        InvitationsService.name,
+      );
+      throw new ForbiddenException(
+        'This invite code has reached its usage limit and can no longer be used. Request a new one from the server owner.',
+      );
     }
   }
 
@@ -35,7 +49,10 @@ export class InvitationsService {
     });
 
     if (!invite) {
-      throw new NotFoundException('invite code does not exist');
+      throw new NotFoundException('invite code', inviteCode, {
+        inviteCode,
+        message: 'This invite code does not exist or has been revoked.',
+      });
     }
 
     this.validateInvite(invite);
@@ -60,7 +77,10 @@ export class InvitationsService {
       });
 
       if (!invite) {
-        throw new NotFoundException('invite code does not exist');
+        throw new NotFoundException('invite code', inviteCode, {
+          inviteCode,
+          message: 'This invite code does not exist or has been revoked.',
+        });
       }
 
       this.validateInvite(invite);
@@ -69,7 +89,9 @@ export class InvitationsService {
         (m) => userId === m.memberId,
       )[0];
       if (existingMember) {
-        throw new BadRequestException('User is already a member');
+        throw new BadRequestException(
+          'You are already a member of this server. You do not need to use an invite code again.',
+        );
       }
 
       const everyoneRole = invite.server.roles.filter(
@@ -100,7 +122,10 @@ export class InvitationsService {
       relations: ['server'],
     });
     if (!invitaion) {
-      throw new NotFoundException('invitation code does not exist');
+      throw new NotFoundException('invite code', inviteCode, {
+        inviteCode,
+        message: 'This invite code does not exist or has been revoked.',
+      });
     }
 
     await this.invitationsRepository.softDelete({ inviteCode });

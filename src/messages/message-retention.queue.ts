@@ -1,5 +1,5 @@
 import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Job, Queue } from 'bullmq';
 import { LoggingService } from '../logging/logging.service';
 import { MessagesService } from './messages.service';
@@ -22,7 +22,9 @@ export class MessageRetentionConsumer extends WorkerHost {
     this.logger.child({ context: MessageRetentionConsumer.name });
   }
 
-  async process(job: Job<HardDeleteMessageJobData, void, MessageRetentionJobName>) {
+  async process(
+    job: Job<HardDeleteMessageJobData, void, MessageRetentionJobName>,
+  ) {
     switch (job.name) {
       case 'hard-delete-message':
         await this.messagesService.hardDeleteSoftDeletedMessage(

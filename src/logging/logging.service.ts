@@ -69,20 +69,20 @@ export class LoggingService implements NestLoggerService {
   }
 
   // NestJS LoggerService interface methods
-  log(message: string, context?: string) {
-    this.logger.info(message, { context });
+  log(message: string, ...meta: any[]) {
+    this.logger.info(message, meta);
   }
-  error(message: string, trace?: string, context?: string) {
-    this.logger.error(message, { trace, context });
+  error(message: string, ...meta: any[]) {
+    this.logger.error(message, meta);
   }
-  warn(message: string, context?: string) {
-    this.logger.warn(message, { context });
+  warn(message: string, ...meta: any[]) {
+    this.logger.warn(message, meta);
   }
-  debug(message: string, context?: string) {
-    this.logger.debug(message, { context });
+  debug(message: string, ...meta: any[]) {
+    this.logger.debug(message, meta);
   }
-  verbose(message: string, context?: string) {
-    this.logger.http(message, { context });
+  verbose(message: string, ...meta: any[]) {
+    this.logger.http(message, meta);
   }
 
   // Extended helpers

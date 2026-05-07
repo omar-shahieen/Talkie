@@ -1,11 +1,4 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Inject,
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { jwtConstants, JwtPayload } from './constants';
@@ -20,6 +13,14 @@ import { Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { nanoid } from 'nanoid';
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
+import {
+  NotFoundException,
+  UnauthorizedException,
+  BadRequestException,
+  ForbiddenException,
+} from 'src/common/exceptions/domain.exception';
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 @Injectable()
 export class AuthService {
@@ -43,7 +44,7 @@ export class AuthService {
     return `${maskedName}@${domain}`;
   }
 
-  // Called by LocalStrategy
+  // called by local strategy
   async validateUser(email: string, password: string) {
     const user = await this.usersRepository
       .createQueryBuilder('user')
@@ -52,27 +53,35 @@ export class AuthService {
       .getOne();
 
     if (!user) {
+      await sleep(300); // Delays for 300 ms for security reasone
       this.logger.warn(
-        `Auth login failed: user not found email=${this.redactEmail(email)}`,
+        `Authentication failed: user not found email=${this.redactEmail(email)}`,
+        AuthService.name,
       );
-      this.eventBus.emit(AppEvents.USER_LOGIN_FAILED, {
-        emailRedacted: this.redactEmail(email),
-        reason: 'user-not-found',
-      });
-      return null;
+      throw new UnauthorizedException(
+        'Email or password is incorrect. Please check your credentials and try again.',
+        {
+          // deliberately vague to client — detailed reason only in logs/audit
+          emailRedacted: this.redactEmail(email),
+          reason: 'user-not-found',
+        },
+      );
     }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       this.logger.warn(
-        `Auth login failed: invalid credentials userId=${user.id}`,
+        `Authentication failed: invalid password email=${this.redactEmail(user.email)} userId=${user.id}`,
+        AuthService.name,
       );
-      this.eventBus.emit(AppEvents.USER_LOGIN_FAILED, {
-        userId: user.id,
-        emailRedacted: this.redactEmail(user.email),
-        reason: 'invalid-password',
-      });
-      return null;
+      throw new UnauthorizedException(
+        'Email or password is incorrect. Please check your credentials and try again.',
+        {
+          userId: user.id,
+          emailRedacted: this.redactEmail(user.email),
+          reason: 'invalid-password',
+        },
+      );
     }
 
     return {
@@ -81,7 +90,6 @@ export class AuthService {
       isTfaEnabled: user.isTfaEnabled,
     };
   }
-
   async signIn(userId: string, email: string) {
     const payload = { sub: userId, email };
 
@@ -92,7 +100,14 @@ export class AuthService {
       .getOne();
 
     if (!user) {
-      throw new NotFoundException('user not found');
+      this.logger.warn(
+        `Sign-in failed: user not found userId=${userId}`,
+        AuthService.name,
+      );
+      throw new NotFoundException('user', userId, {
+        userId,
+        message: 'User account not found. The account may have been deleted.',
+      });
     }
     // create access and refresh token
     const access_token = await this.jwtService.signAsync(payload, {
@@ -132,19 +147,20 @@ export class AuthService {
       select: ['id', 'password'], // explicitly select password since select: false
     });
     if (!user) {
-      throw new NotFoundException('user not found');
+      throw new NotFoundException('user', userId, { userId });
     }
 
     // check old password
 
-    if (newPassword === oldPassword) {
-      throw new BadRequestException(
-        'new password must differ from old password',
-      );
-    }
     const isCorrectPassword = await user.comparePassword(oldPassword);
     if (!isCorrectPassword) {
-      throw new UnauthorizedException('incorrect current password');
+      this.logger.warn(
+        `Password change failed: incorrect current password userId=${userId}`,
+        AuthService.name,
+      );
+      throw new UnauthorizedException(
+        'The current password you provided is incorrect. Please verify and try again.',
+      );
     }
 
     // store the new password
@@ -186,13 +202,30 @@ export class AuthService {
 
   async resetPassword(newPassword: string, resetToken: string) {
     const userId = await this.cache.get<string>(`resetToken:${resetToken}`);
-    if (!userId) throw new UnauthorizedException('invalid or expired token');
+    if (!userId) {
+      this.logger.warn(
+        `Password reset failed: invalid or expired token`,
+        AuthService.name,
+      );
+      throw new UnauthorizedException(
+        'The password reset token is invalid or has expired. Please request a new password reset.',
+      );
+    }
 
     const user = await this.usersRepository.findOne({
       where: { id: userId },
       select: ['id', 'password'],
     });
-    if (!user) throw new NotFoundException('user not found');
+    if (!user) {
+      this.logger.warn(
+        `Password reset failed: user not found userId=${userId}`,
+        AuthService.name,
+      );
+      throw new NotFoundException('user', userId, {
+        userId,
+        message: 'User account not found. The account may have been deleted.',
+      });
+    }
 
     user.password = newPassword;
     await this.usersRepository.save(user);
@@ -224,7 +257,7 @@ export class AuthService {
         AuthService.name,
       );
       throw new UnauthorizedException(
-        'Invalid or expired TFA login token. Please sign in again.',
+        'Your TFA login token has expired or is invalid. Please sign in again and complete two-factor authentication.',
       );
     }
 
@@ -234,7 +267,7 @@ export class AuthService {
         AuthService.name,
       );
       throw new UnauthorizedException(
-        'Invalid TFA login token payload. Please sign in again.',
+        'The TFA login token is malformed or invalid. Please sign in again and complete two-factor authentication.',
       );
     }
 
@@ -387,7 +420,7 @@ export class AuthService {
       this.logger.warn(
         `TFA setup initiation failed: user not found email=${this.redactEmail(email)}`,
       );
-      throw new NotFoundException('User was not found for TFA setup');
+      throw new NotFoundException('user', email, { email });
     }
 
     const { uri, secret } = this.generateSecret(email);
@@ -442,10 +475,25 @@ export class AuthService {
       .where('user.email = :email', { email })
       .getOne();
 
-    if (!user) throw new NotFoundException('User was not found for TFA enable');
+    if (!user) {
+      this.logger.warn(
+        `TFA setup failed: user not found email=${this.redactEmail(email)}`,
+        AuthService.name,
+      );
+      throw new NotFoundException('user', email, {
+        email,
+        message: 'User account not found. Please check your email address.',
+      });
+    }
 
     if (user.isTfaEnabled) {
-      throw new BadRequestException('TFA is already enabled for this account');
+      this.logger.warn(
+        `TFA setup failed: TFA already enabled userId=${user.id}`,
+        AuthService.name,
+      );
+      throw new BadRequestException(
+        'Two-factor authentication is already enabled for your account. Disable it first if you want to set up a new one.',
+      );
     }
 
     // Secret must have been saved via initiateTfaEnabling first
@@ -492,11 +540,25 @@ export class AuthService {
       .where('user.email = :email', { email })
       .getOne();
 
-    if (!user)
-      throw new NotFoundException('User was not found for TFA disable request');
+    if (!user) {
+      this.logger.warn(
+        `TFA disable failed: user not found email=${this.redactEmail(email)}`,
+        AuthService.name,
+      );
+      throw new NotFoundException('user', email, {
+        email,
+        message: 'User account not found. Please check your email address.',
+      });
+    }
 
     if (!user.isTfaEnabled || !user.tfaSecret) {
-      throw new ForbiddenException('TFA is not enabled for this account');
+      this.logger.warn(
+        `TFA disable failed: TFA not enabled userId=${user.id}`,
+        AuthService.name,
+      );
+      throw new ForbiddenException(
+        'Two-factor authentication is not enabled for this account. Enable it first before you can use TFA authentication.',
+      );
     }
 
     if (
@@ -539,7 +601,13 @@ export class AuthService {
       );
     }
     if (!fullUser?.isTfaEnabled || !fullUser.tfaSecret) {
-      throw new UnauthorizedException('TFA is not enabled for this account');
+      this.logger.warn(
+        `TFA sign-in failed: TFA not enabled userId=${user.id}`,
+        AuthService.name,
+      );
+      throw new UnauthorizedException(
+        'Two-factor authentication is not enabled for this account. Please enable it first.',
+      );
     }
 
     if (
