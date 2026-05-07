@@ -60,7 +60,10 @@ export class ChatGateway
     const userId = client.data?.user?.id;
 
     if (!userId) {
-      this.logger.warn(`Unauthorized WS connection (Client ID: ${client.id})`);
+      this.logger.warn('Unauthorized WS connection', {
+        action: 'handleConnection',
+        clientId: client.id,
+      });
       client.disconnect();
       return;
     }

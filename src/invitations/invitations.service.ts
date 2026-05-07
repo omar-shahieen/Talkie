@@ -23,21 +23,21 @@ export class InvitationsService {
 
   private validateInvite(invite: Invitation): void {
     if (invite.expiresAt && invite.expiresAt <= new Date()) {
-      this.logger.warn(
-        `Invite code validation failed: code expired inviteCode=${invite.inviteCode} expiresAt=${invite.expiresAt.toISOString()}`,
-        InvitationsService.name,
-      );
       throw new ForbiddenException(
         'This invite code has expired and can no longer be used. Request a new one from the server owner.',
+        {
+          action: 'validateInvite',
+          inviteCode: invite.inviteCode,
+        },
       );
     }
     if (invite.maxUses && invite.maxUses <= invite.currentUses) {
-      this.logger.warn(
-        `Invite code validation failed: usage limit reached inviteCode=${invite.inviteCode} maxUses=${invite.maxUses} currentUses=${invite.currentUses}`,
-        InvitationsService.name,
-      );
       throw new ForbiddenException(
         'This invite code has reached its usage limit and can no longer be used. Request a new one from the server owner.',
+        {
+          action: 'validateInvite',
+          inviteCode: invite.inviteCode,
+        },
       );
     }
   }

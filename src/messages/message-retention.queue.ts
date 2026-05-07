@@ -1,18 +1,14 @@
-import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
-import { Inject, Injectable } from '@nestjs/common';
-import { Job, Queue } from 'bullmq';
+import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Job } from 'bullmq';
 import { LoggingService } from '../logging/logging.service';
 import { MessagesService } from './messages.service';
+import {
+  HardDeleteMessageJobData,
+  MessageRetentionJobName,
+} from './dtos/hard-delete-message-job.dto';
+import { MESSAGE_QUEUE } from './message.constant';
 
-interface HardDeleteMessageJobData {
-  messageId: string;
-}
-
-type MessageRetentionJobName = 'hard-delete-message';
-
-const HARD_DELETE_DELAY_MS = 24 * 60 * 60 * 1000;
-
-@Processor('message-retention')
+@Processor(MESSAGE_QUEUE)
 export class MessageRetentionConsumer extends WorkerHost {
   constructor(
     private readonly messagesService: MessagesService,
@@ -34,34 +30,5 @@ export class MessageRetentionConsumer extends WorkerHost {
       default:
         throw new Error(`Unknown message retention job: ${job.name}`);
     }
-  }
-}
-
-@Injectable()
-export class MessageRetentionQueueService {
-  constructor(
-    @InjectQueue('message-retention')
-    private readonly queue: Queue,
-    private readonly logger: LoggingService,
-  ) {
-    this.logger.child({ context: MessageRetentionQueueService.name });
-  }
-
-  async enqueueHardDelete(messageId: string) {
-    await this.queue.add(
-      'hard-delete-message',
-      { messageId },
-      {
-        jobId: `hard-delete-message:${messageId}`,
-        delay: HARD_DELETE_DELAY_MS,
-        removeOnComplete: true,
-        removeOnFail: true,
-      },
-    );
-
-    this.logger.log(
-      `Queued hard-delete for message ${messageId} after 24 hours`,
-      MessageRetentionQueueService.name,
-    );
   }
 }

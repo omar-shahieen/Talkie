@@ -153,12 +153,13 @@ export class ServersService {
   async leaveServer(serverId: string, userId: string): Promise<void> {
     const server = await this.findOne(serverId);
     if (server.ownerId === userId) {
-      this.logger.warn(
-        `Server leave failed: owner cannot leave serverId=${serverId} userId=${userId}`,
-        ServersService.name,
-      );
       throw new BadRequestException(
         'You cannot leave this server as the owner. Please transfer ownership to another member first, then you can leave.',
+        {
+          action: 'leaveServer',
+          serverId,
+          userId,
+        },
       );
     }
 
@@ -181,21 +182,26 @@ export class ServersService {
   async remove(id: string, requesterId: string): Promise<void> {
     const server = await this.findOne(id);
     if (!requesterId) {
-      this.logger.error(
-        `Server deletion failed: requester ID missing serverId=${id}`,
-        ServersService.name,
-      );
+      this.logger.error('Server deletion failed: requester ID missing', {
+        action: 'remove',
+        serverId: id,
+      });
       throw new BadRequestException(
         'The requester ID is missing. Unable to process server deletion without authentication.',
+        {
+          action: 'remove',
+          serverId: id,
+        },
       );
     }
     if (server.ownerId !== requesterId) {
-      this.logger.warn(
-        `Server deletion failed: only owner can delete serverId=${id} requesterId=${requesterId} ownerId=${server.ownerId}`,
-        ServersService.name,
-      );
       throw new ForbiddenException(
         'Only the server owner can delete the server. Contact the owner if you want the server removed.',
+        {
+          action: 'remove',
+          serverId: id,
+          requesterId,
+        },
       );
     }
 
@@ -224,11 +230,8 @@ export class ServersService {
       where: { id: serverId },
     });
     if (!server) {
-      this.logger.warn(
-        `Server not found serverId=${serverId}`,
-        ServersService.name,
-      );
       throw new NotFoundException('server', serverId, {
+        action: 'createInvitation',
         serverId,
         message: 'This server does not exist or has been deleted.',
       });
@@ -241,11 +244,8 @@ export class ServersService {
     });
 
     if (!member) {
-      this.logger.warn(
-        `Server invitation creation failed: inviter not a member serverId=${serverId} inviterId=${inviterId}`,
-        ServersService.name,
-      );
       throw new NotFoundException('server member', `${serverId}:${inviterId}`, {
+        action: 'createInvitation',
         serverId,
         userId: inviterId,
         message: 'You must be a member of the server to create invitations.',
@@ -288,12 +288,13 @@ export class ServersService {
       serverId,
     });
     if (!member) {
-      this.logger.warn(
-        `Server member lookup failed: user not a member serverId=${serverId} userId=${userId}`,
-        ServersService.name,
-      );
       throw new ForbiddenException(
         'You are not a member of this server. Join the server first to perform this action.',
+        {
+          action: 'findUserInvitations',
+          serverId,
+          userId,
+        },
       );
     }
     return this.invitationsRepository.find({

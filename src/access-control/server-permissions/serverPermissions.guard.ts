@@ -76,11 +76,14 @@ export class ServerPermissionsGuard implements CanActivate {
     const { userId, serverId, channelId } = this.extractContext(context);
 
     if (!userId || !serverId) {
-      this.logger.warn(
-        `Permission context rejected: userId=${userId ?? 'missing'} serverId=${serverId ?? 'missing'} channelId=${channelId ?? 'missing'}`,
-      );
       throw new ForbiddenException(
         'Permission context is incomplete: userId, serverId and channelId are required.',
+        {
+          action: 'canActivate',
+          userId,
+          serverId,
+          channelId,
+        },
       );
     }
 
@@ -100,13 +103,23 @@ export class ServerPermissionsGuard implements CanActivate {
         effectivePermissions: perms.toJSON(),
       };
 
-      this.logger.warn(
-        `Permission denied for userId=${userId} serverId=${serverId} channelId=${channelId}`,
-      );
+      this.logger.warn('Permission denied', {
+        action: 'canActivate',
+        userId,
+        serverId,
+        channelId,
+        requiredPermissions: requiredPermissions.map((p) => p.toString()),
+      });
       this.eventBus.emit(AppEvents.PERMISSION_DENIED, payload);
 
       throw new ForbiddenException(
         'You do not have the required permissions for this channel action.',
+        {
+          action: 'canActivate',
+          userId,
+          serverId,
+          channelId,
+        },
       );
     }
 

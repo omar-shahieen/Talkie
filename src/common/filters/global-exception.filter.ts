@@ -99,6 +99,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     isOperational: boolean,
   ): void {
     const logPayload = {
+      action:
+        exception instanceof AppException
+          ? (exception.context.action ?? exception.errorCode)
+          : 'UNHANDLED',
       correlationId: response.correlationId,
       statusCode,
       errorCode: response.errorCode,
@@ -120,9 +124,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         stack: exception instanceof Error ? exception.stack : undefined,
       });
     } else if (statusCode >= 500) {
-      this.logger.error('Operational server error', logPayload);
+      this.logger.error(logPayload.message, logPayload);
     } else {
-      this.logger.warn('Client error', logPayload);
+      this.logger.warn(logPayload.message, logPayload);
     }
 
     // Audit trail — only for security-sensitive errors

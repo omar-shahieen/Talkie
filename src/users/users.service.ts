@@ -85,10 +85,10 @@ export class UsersService {
       const deleteResult = await this.usersRepository.delete(id);
 
       if (!deleteResult.affected) {
-        this.logger.warn(
-          `User remove requested for missing userId=${id}`,
-          UsersService.name,
-        );
+        this.logger.warn('User remove requested for missing user', {
+          action: 'remove',
+          userId: id,
+        });
         return;
       }
 

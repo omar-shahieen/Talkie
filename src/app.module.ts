@@ -32,6 +32,7 @@ import { ServerPermissionsGuard } from './access-control/server-permissions/serv
 import { AppPermissionsGuard } from './access-control/app-permissions/appPermissions.guard';
 import { CorrelationIdInterceptor } from './common/interceptors/correlation-id.interceptor';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { FilesModule } from './files/files.module';
 
 @Module({
   imports: [
@@ -136,6 +137,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
     PresenceModule,
     InvitationsModule,
     FriendsModule,
+    FilesModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,4 +1,5 @@
 export interface AppExceptionContext {
+  action?: string;
   userId?: string;
   resourceId?: string;
   resourceType?: string;
