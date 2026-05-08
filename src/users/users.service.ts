@@ -57,7 +57,12 @@ export class UsersService {
       const savedUser = await this.usersRepository.save(newUser);
       this.logger.log(
         `User created userId=${savedUser.id} email=${this.redactEmail(savedUser.email ?? user.email)}`,
-        UsersService.name,
+        {
+          context: UsersService.name,
+          action: 'create',
+          userId: savedUser.id,
+          email: this.redactEmail(savedUser.email ?? user.email),
+        },
       );
       return savedUser;
     } catch (error) {
@@ -86,13 +91,18 @@ export class UsersService {
 
       if (!deleteResult.affected) {
         this.logger.warn('User remove requested for missing user', {
+          context: UsersService.name,
           action: 'remove',
           userId: id,
         });
         return;
       }
 
-      this.logger.log(`User removed userId=${id}`, UsersService.name);
+      this.logger.log(`User removed userId=${id}`, {
+        context: UsersService.name,
+        action: 'remove',
+        userId: id,
+      });
     } catch (error) {
       this.logger.logError('User removal failed', error, {
         context: UsersService.name,

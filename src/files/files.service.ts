@@ -33,8 +33,6 @@ export class FilesService {
     private readonly serverMembersRepository: Repository<ServerMember>,
     private readonly logger: LoggingService,
   ) {
-    this.logger.child({ context: FilesService.name });
-
     if (!existsSync(this.uploadsDir)) {
       mkdirSync(this.uploadsDir, { recursive: true });
     }
@@ -45,6 +43,14 @@ export class FilesService {
     files: Express.Multer.File[],
     req: AuthenticatedRequest,
   ): Promise<FileUploadResult> {
+    this.logger.log('Processing upload request', {
+      context: FilesService.name,
+      action: 'handleUpload',
+      channelId,
+      userId: req.user.id,
+      fileCount: files.length,
+    });
+
     await this.assertCanUploadToChannel(channelId, req.user.id);
 
     const baseUrl = `${req.protocol}://${req.get('host')}`;
@@ -109,6 +115,7 @@ export class FilesService {
 
     if (!channel.serverId) {
       this.logger.error('Server channel missing serverId', {
+        context: FilesService.name,
         action: 'assertCanUploadToChannel',
         channelId,
       });

@@ -9,7 +9,6 @@ import {
   Put,
   Req,
   Res,
-  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import type { Response, Request } from 'express';
@@ -25,6 +24,7 @@ import { type AuthenticatedRequest } from './types/authenticated-request.type';
 import { ChangePasswordDto } from './dtos/changePassword.dto';
 import { ForgetPasswordDto } from './dtos/forgetPassowrd.dto';
 import { ResetPasswordDto } from './dtos/resetPassword.dto';
+import { UnauthorizedException } from 'src/common/exceptions/domain.exception';
 
 @Controller('auth')
 export class AuthController {
@@ -216,7 +216,9 @@ export class AuthController {
         : '';
 
     if (!tfaLoginToken) {
-      throw new UnauthorizedException('Missing TFA login token');
+      throw new UnauthorizedException('Missing TFA login token', {
+        action: 'verifyTfa',
+      });
     }
 
     const user = await this.authService.validateTfaLoginToken(tfaLoginToken);

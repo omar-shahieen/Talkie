@@ -19,9 +19,7 @@ export class ServerPermissionsService {
     @InjectRepository(ServerMember)
     private readonly memberRepository: Repository<ServerMember>,
     private readonly logger: LoggingService,
-  ) {
-    this.logger.child({ context: ServerPermissionsService.name });
-  }
+  ) {}
   async resolveForChannel(
     userId: string,
     serverId: string,
@@ -29,6 +27,13 @@ export class ServerPermissionsService {
   ): Promise<PermissionsBitfield> {
     this.logger.debug(
       `Resolving app permissions for userId=${userId} serverId=${serverId} channelId=${channelId}`,
+      {
+        context: ServerPermissionsService.name,
+        action: 'resolveForChannel',
+        userId,
+        serverId,
+        channelId,
+      },
     );
 
     const server = await this.serverRepository.findOneByOrFail({
@@ -87,6 +92,14 @@ export class ServerPermissionsService {
 
     this.logger.debug(
       `Resolved permissions for userId=${userId} channelId=${channelId} bitfield=${perms.toJSON()}`,
+      {
+        context: ServerPermissionsService.name,
+        action: 'resolveForChannel',
+        userId,
+        serverId,
+        channelId,
+        permissions: perms.toJSON(),
+      },
     );
 
     return perms;

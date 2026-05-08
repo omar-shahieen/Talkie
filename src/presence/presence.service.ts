@@ -179,14 +179,23 @@ export class PresenceService {
 
     delete data.connections[clientId];
 
-    this.logger.log(`Socket disconnected: ${clientId} for user: ${userId}`);
+    this.logger.log(`Socket disconnected: ${clientId} for user: ${userId}`, {
+      context: PresenceService.name,
+      action: 'disconnect',
+      clientId,
+      userId,
+    });
 
     const connections = Object.keys(data.connections);
 
     if (connections.length === 0) {
       await this.cache.del(key);
 
-      this.logger.log(`User ${userId} became offline`);
+      this.logger.log(`User ${userId} became offline`, {
+        context: PresenceService.name,
+        action: 'disconnect',
+        userId,
+      });
       return true;
     } else {
       await this.cache.set(key, data, this.TTL);

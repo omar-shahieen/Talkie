@@ -117,7 +117,12 @@ export class AuthService {
 
     this.logger.log(
       `Auth login succeeded for email=${this.redactEmail(email)}`,
-      AuthService.name,
+      {
+        context: AuthService.name,
+        action: 'signIn',
+        userId,
+        emailRedacted: this.redactEmail(email),
+      },
     );
     this.eventBus.emit(AppEvents.USER_LOGIN, {
       userId: userId,
@@ -275,7 +280,12 @@ export class AuthService {
 
     await this.usersRepository.save(createdUser);
 
-    this.logger.log(`Auth signup succeeded for userId=${createdUser.id}`);
+    this.logger.log(`Auth signup succeeded for userId=${createdUser.id}`, {
+      context: AuthService.name,
+      action: 'signUp',
+      userId: createdUser.id,
+      email: this.redactEmail(email),
+    });
 
     this.eventBus.emit(AppEvents.USER_SIGNUP, {
       userId: createdUser.id,
@@ -336,7 +346,11 @@ export class AuthService {
       },
     );
 
-    this.logger.log(`Access token refreshed for userId=${decodedUser.sub}`);
+    this.logger.log(`Access token refreshed for userId=${decodedUser.sub}`, {
+      context: AuthService.name,
+      action: 'refreshToken',
+      userId: decodedUser.sub,
+    });
 
     return { access_token: newAccessToken };
   }
@@ -371,6 +385,12 @@ export class AuthService {
 
       this.logger.log(
         `Google OAuth user created userId=${user.id} email=${redactedEmail}`,
+        {
+          context: AuthService.name,
+          action: 'findOrCreateGoogleUser',
+          userId: user.id,
+          email: redactedEmail,
+        },
       );
     } else if (!user.googleId) {
       user.googleId = profile.googleId;
@@ -379,11 +399,22 @@ export class AuthService {
 
       this.logger.log(
         `Google OAuth account linked userId=${user.id} email=${redactedEmail}`,
-        AuthService.name,
+        {
+          context: AuthService.name,
+          action: 'findOrCreateGoogleUser',
+          userId: user.id,
+          email: redactedEmail,
+        },
       );
     } else {
       this.logger.debug(
         `Google OAuth login matched existing linked userId=${user.id} email=${redactedEmail}`,
+        {
+          context: AuthService.name,
+          action: 'findOrCreateGoogleUser',
+          userId: user.id,
+          email: redactedEmail,
+        },
       );
     }
 
@@ -425,7 +456,12 @@ export class AuthService {
 
     this.logger.log(
       `TFA setup initiated for userId=${user.id} email=${this.redactEmail(email)}`,
-      AuthService.name,
+      {
+        context: AuthService.name,
+        action: 'initiateTfaEnabling',
+        userId: user.id,
+        email: this.redactEmail(email),
+      },
     );
 
     // Return the URI so the frontend can render the QR code
@@ -510,7 +546,12 @@ export class AuthService {
 
     await this.usersRepository.save(user);
 
-    this.logger.log(`TFA enabled for userId=${user.id}`, AuthService.name);
+    this.logger.log(`TFA enabled for userId=${user.id}`, {
+      context: AuthService.name,
+      action: 'enableTfaForUser',
+      userId: user.id,
+      email: this.redactEmail(email),
+    });
     this.eventBus.emit(AppEvents.USER_TFA_ENABLED, {
       userId: user.id,
       email,
@@ -566,7 +607,12 @@ export class AuthService {
 
     await this.usersRepository.save(user);
 
-    this.logger.log(`TFA disabled for userId=${user.id}`, AuthService.name);
+    this.logger.log(`TFA disabled for userId=${user.id}`, {
+      context: AuthService.name,
+      action: 'disableTfaForUser',
+      userId: user.id,
+      email: this.redactEmail(email),
+    });
 
     this.eventBus.emit(AppEvents.USER_TFA_DISABLED, {
       userId: user.id,
@@ -620,7 +666,11 @@ export class AuthService {
 
   async logout(userId: string): Promise<void> {
     await this.usersRepository.update(userId, { currentJwtToken: '' });
-    this.logger.log(`User logged out userId=${userId}`);
+    this.logger.log(`User logged out userId=${userId}`, {
+      context: AuthService.name,
+      action: 'logout',
+      userId,
+    });
     this.eventBus.emit(AppEvents.USER_LOGOUT, { userId });
   }
 }

@@ -3,7 +3,6 @@ import {
   ExceptionFilter,
   Catch,
   ArgumentsHost,
-  HttpException,
   HttpStatus,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
@@ -34,9 +33,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     private readonly config: ConfigService,
     private readonly logger: LoggingService,
     private readonly emiter: EventBusService,
-  ) {
-    this.logger.child({ context: GlobalExceptionFilter.name });
-  }
+  ) {}
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -66,6 +63,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       crypto.randomUUID();
 
     const responseBody: ErrorResponseDto = {
+      success: false,
       statusCode,
       errorCode,
       message: isDev ? message : this.sanitize(statusCode, message),
@@ -85,20 +83,18 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       isOperational,
     );
 
-    res.status(statusCode).json({
-      success: false,
-      ...responseBody,
-    });
+    res.status(statusCode).json(responseBody);
   }
 
   private handleAuditAndLogging(
     exception: unknown,
-    request: Request & { user?: { id: string } },
+    request: Request,
     response: ErrorResponseDto,
     statusCode: number,
     isOperational: boolean,
   ): void {
     const logPayload = {
+      context: GlobalExceptionFilter.name,
       action:
         exception instanceof AppException
           ? (exception.context.action ?? exception.errorCode)
@@ -110,7 +106,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       path: request.url,
       method: request.method,
       userAgent: request.headers['user-agent'],
-      context:
+      exceptionContext:
         exception instanceof AppException ? exception.context : undefined,
     };
 
@@ -130,8 +126,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     if ([401, 403, 429].includes(statusCode)) {
       this.emiter.emit(AppEvents.SECURITY_ERROR, {
         action: AppEvents.SECURITY_ERROR,
-        actorId: this.cls.get<string>('userId') ?? 'anonymous',
-        correlationId: this.cls.get<string>('correlationId') ?? 'anonymous',
         resourceType: 'HTTP',
         resourceId: request.url,
         metadata: logPayload,
@@ -179,7 +173,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
         case '23503': // foreign_key_violation
           return {
-            statusCode: 409, // or 400, depending on your preference
+            statusCode: 409,
             errorCode: 'FOREIGN_KEY_VIOLATION',
             message:
               'The referenced record does not exist or is currently in use.',
@@ -214,17 +208,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             isOperational: true,
           };
       }
-    }
-    if (exception instanceof HttpException) {
-      const res = exception.getResponse();
-      const message =
-        typeof res === 'string' ? res : (res as { message: string }).message;
-      return {
-        statusCode: exception.getStatus(),
-        errorCode: 'HTTP_EXCEPTION',
-        message: Array.isArray(message) ? message.join('; ') : message,
-        isOperational: true,
-      };
     }
     // Unknown / programming error
     return {

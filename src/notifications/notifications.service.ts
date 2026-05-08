@@ -15,9 +15,7 @@ export class NotificationsService {
     private notificationsRepo: Repository<Notification>,
     private eventEmitter: EventBusService,
     private logger: LoggingService,
-  ) {
-    this.logger.child({ context: NotificationsService.name });
-  }
+  ) {}
 
   async markAsRead(notificationId: string, userId: string) {
     await this.notificationsRepo.update(notificationId, { isRead: true });
@@ -51,6 +49,12 @@ export class NotificationsService {
 
       this.logger.log(
         `Notification is created for user : ${payload.recepientId} with id : ${saved.id} `,
+        {
+          context: NotificationsService.name,
+          action: 'handleDmMessageCreated',
+          recipientId: payload.recepientId,
+          notificationId: saved.id,
+        },
       );
       this.eventEmitter.emit('notification.created', { ...saved });
     }
@@ -79,6 +83,14 @@ export class NotificationsService {
 
         this.logger.log(
           `Notification is created for user : ${mentionendUser} with id : ${saved.id} `,
+          {
+            context: NotificationsService.name,
+            action: 'handleMentionsMessageCreated',
+            recipientId: mentionendUser,
+            notificationId: saved.id,
+            channelId: payload.channelId,
+            serverId: payload.serverId,
+          },
         );
         this.eventEmitter.emit('notification.created', { ...saved });
       }

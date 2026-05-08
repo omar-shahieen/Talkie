@@ -1,4 +1,3 @@
-// common/interceptors/logging.interceptor.ts
 import {
   CallHandler,
   ExecutionContext,
@@ -6,9 +5,10 @@ import {
   NestInterceptor,
 } from '@nestjs/common';
 import { Observable, throwError } from 'rxjs';
-import { tap, catchError } from 'rxjs/operators';
+import { tap, catchError, map } from 'rxjs/operators';
 import { Response } from 'express';
 import { ClsService } from 'nestjs-cls';
+import { ConfigService } from '@nestjs/config';
 import { LoggingService } from '../../logging/logging.service';
 import { MyClsStore } from '../interface/cls-store.interface';
 import { AuthenticatedRequest } from 'src/auth/types/authenticated-request.type';
@@ -20,14 +20,17 @@ export class LoggingInterceptor implements NestInterceptor {
     private readonly cls: ClsService<MyClsStore>,
     private readonly logger: LoggingService,
     private readonly metrics: MetricsService,
+    private readonly configService: ConfigService,
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const res = context.switchToHttp().getResponse<Response>();
     const start = Date.now();
+    const isDev = this.configService.get('NODE_ENV') === 'development';
 
     const baseMeta = {
+      context: LoggingInterceptor.name,
       method: req.method,
       url: req.url,
       correlationId: this.cls.get<string>('correlationId'),
@@ -39,25 +42,44 @@ export class LoggingInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       tap(() => {
+        const route =
+          (req.route as { path?: string } | undefined)?.path ?? req.url;
+
         this.logger.log(`← ${req.method} ${req.url}`, {
           ...baseMeta,
           statusCode: res.statusCode,
           ms: Date.now() - start,
+          route,
         });
 
         this.metrics.recordRequest(
           req.method,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-          (req.route?.path as string) ?? req.url,
+          route,
           res.statusCode,
           Date.now() - start,
         );
+      }),
+      map((data: any): any => {
+        // transorm for responses
+        const ms = Date.now() - start;
+
+        // Only attach sensitive metadata in development mode
+        if (isDev) {
+          return {
+            ...data,
+            ms,
+          };
+        }
+
+        return data;
       }),
       catchError((err: unknown) => {
         const ms = Date.now() - start;
 
         if (err && typeof err === 'object') {
-          (err as { ms?: number }).ms = ms;
+          const mutableErr = err as { ms?: number; context?: string };
+          mutableErr.ms = ms;
+          mutableErr.context = LoggingInterceptor.name;
         }
 
         return throwError(() => err); // re-throw so the filter still catches it

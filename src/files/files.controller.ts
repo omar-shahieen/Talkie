@@ -30,7 +30,9 @@ export class FilesController {
     @Req() req: AuthenticatedRequest,
   ): Promise<FileUploadResult> {
     if (!files?.length) {
-      throw new BadRequestException('No files uploaded');
+      throw new BadRequestException('No files uploaded', {
+        action: 'uploadFiles',
+      });
     }
 
     return this.filesService.handleUpload(dto.channelId, files, req);

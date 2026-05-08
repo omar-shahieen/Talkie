@@ -1,8 +1,9 @@
 import { IsInt, IsString, IsUUID, Max, Min } from 'class-validator';
 
 export class ErrorResponseDto {
+  success: boolean = false;
   @IsInt()
-  @Min(100)
+  @Min(400)
   @Max(600)
   statusCode!: number;
   @IsString()

@@ -11,9 +11,7 @@ export class RealtimeAuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly logger: LoggingService,
-  ) {
-    this.logger.child({ context: RealtimeAuthGuard.name });
-  }
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const client = context.switchToWs().getClient<AuthenticatedSocket>();
@@ -26,6 +24,7 @@ export class RealtimeAuthGuard implements CanActivate {
     const token = this.extractToken(client);
     if (!token) {
       this.logger.warn('Unauthorized WS connection: missing token', {
+        context: RealtimeAuthGuard.name,
         action: 'canActivate',
         clientId,
         reason: 'missing-token',
@@ -41,6 +40,12 @@ export class RealtimeAuthGuard implements CanActivate {
       client.data.user = { id: payload.sub, email: payload.email };
       this.logger.log(
         `WS Client ${clientId} authenticated successfully for User ID: ${payload.sub || 'unknown'}`,
+        {
+          context: RealtimeAuthGuard.name,
+          action: 'canActivate',
+          clientId,
+          userId: payload.sub,
+        },
       );
 
       return true;
@@ -48,6 +53,7 @@ export class RealtimeAuthGuard implements CanActivate {
       const errMessage =
         error instanceof Error ? error.message : 'Unknown error';
       this.logger.warn('Unauthorized WS connection: invalid token', {
+        context: RealtimeAuthGuard.name,
         action: 'canActivate',
         clientId,
         reason: 'invalid-token',

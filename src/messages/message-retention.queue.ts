@@ -15,7 +15,6 @@ export class MessageRetentionConsumer extends WorkerHost {
     private readonly logger: LoggingService,
   ) {
     super();
-    this.logger.child({ context: MessageRetentionConsumer.name });
   }
 
   async process(
@@ -28,7 +27,7 @@ export class MessageRetentionConsumer extends WorkerHost {
         );
         return;
       default:
-        throw new Error(`Unknown message retention job: ${job.name}`);
+        throw new Error(`Unknown message retention job: ${String(job.name)}`);
     }
   }
 }

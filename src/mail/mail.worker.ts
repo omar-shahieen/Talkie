@@ -17,7 +17,6 @@ export class MailWorker extends WorkerHost {
     private readonly logger: LoggingService,
   ) {
     super();
-    this.logger.child({ context: MailWorker.name });
   }
 
   async process(job: Job<MailJobData, void, AppEvents>): Promise<any> {
@@ -59,19 +58,37 @@ export class MailWorker extends WorkerHost {
   onActive(job: Job) {
     this.logger.log(
       `Processing job ${job.id} of type ${job.name} with data ${JSON.stringify(job.data)}...`,
+      {
+        context: MailWorker.name,
+        action: 'active',
+        jobId: job.id,
+        jobName: job.name,
+      },
     );
   }
 
   @OnWorkerEvent('completed')
   onCompleted(job: Job) {
-    this.logger.log(`Completed job ${job.id} of type ${job.name}`);
+    this.logger.log(`Completed job ${job.id} of type ${job.name}`, {
+      context: MailWorker.name,
+      action: 'completed',
+      jobId: job.id,
+      jobName: job.name,
+    });
   }
 
   @OnWorkerEvent('failed')
   onFailed(job: Job | undefined, error: Error) {
     this.logger.error(
       `Failed job ${job?.id} of type ${job?.name}: ${error.message}`,
-      error.stack,
+      {
+        context: MailWorker.name,
+        action: 'failed',
+        jobId: job?.id,
+        jobName: job?.name,
+        error: error.message,
+        stack: error.stack,
+      },
     );
   }
 }

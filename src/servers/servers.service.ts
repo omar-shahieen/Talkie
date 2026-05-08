@@ -183,6 +183,7 @@ export class ServersService {
     const server = await this.findOne(id);
     if (!requesterId) {
       this.logger.error('Server deletion failed: requester ID missing', {
+        context: ServersService.name,
         action: 'remove',
         serverId: id,
       });

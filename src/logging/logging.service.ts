@@ -10,6 +10,7 @@ type MetaArg = Record<string, any> | string | undefined;
 @Injectable()
 export class LoggingService implements NestLoggerService {
   private logger: winston.Logger;
+  private readonly serviceName = process.env.npm_package_name ?? 'talkie';
 
   constructor(private readonly cls: ClsService<MyClsStore>) {
     const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -25,6 +26,9 @@ export class LoggingService implements NestLoggerService {
     this.logger = winston.createLogger({
       level: isDevelopment ? 'debug' : 'info',
       levels: winston.config.npm.levels,
+      defaultMeta: {
+        service: this.serviceName,
+      },
       format: winston.format.combine(
         winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
         winston.format.errors({ stack: true }),
@@ -44,8 +48,14 @@ export class LoggingService implements NestLoggerService {
   }
 
   private normalizeMeta(meta: MetaArg): Record<string, any> {
-    if (typeof meta === 'string') return { context: meta };
-    return meta ?? {};
+    if (typeof meta === 'string') {
+      return { context: meta, service: this.serviceName };
+    }
+
+    return {
+      service: this.serviceName,
+      ...(meta ?? {}),
+    };
   }
 
   private getMeta() {
@@ -103,24 +113,41 @@ export class LoggingService implements NestLoggerService {
     });
   }
 
-  // Returns a child logger — never mutates the singleton
-  child(defaultMeta: Record<string, unknown>): winston.Logger {
-    return this.logger.child(defaultMeta);
+  httpStream() {
+    return {
+      write: (message: string) =>
+        this.logger.http(message.trim(), { service: this.serviceName }),
+    };
   }
 
-  httpStream() {
-    return { write: (message: string) => this.logger.http(message.trim()) };
+  private formatLogValue(value: unknown): string {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return '[unserializable]';
+    }
   }
 
   private buildConsoleTransport() {
     return new winston.transports.Console({
       format: winston.format.combine(
         winston.format.colorize({ all: true }),
-        winston.format.printf(
-          (info) =>
-            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-            `[${info.timestamp}] | ${info.level.toUpperCase()}: ${info.stack ?? info.message}`,
-        ),
+        winston.format.printf((info) => {
+          const contextLabel = info.context
+            ? `${this.formatLogValue(info.service ?? this.serviceName)}:${this.formatLogValue(info.context)}`
+            : this.formatLogValue(info.service ?? this.serviceName);
+          const timestamp = this.formatLogValue(info.timestamp);
+          const level = this.formatLogValue(info.level).toUpperCase();
+          const message = this.formatLogValue(info.stack ?? info.message);
+
+          return `[${timestamp}] | ${contextLabel} | ${level}: ${message}`;
+        }),
       ),
     });
   }
