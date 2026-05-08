@@ -12,9 +12,7 @@ export class AppPermissionsService {
     private readonly usersRepository: Repository<User>,
 
     private readonly logger: LoggingService,
-  ) {
-    this.logger.child({ context: AppPermissionsService.name });
-  }
+  ) {}
   async resolveUserAppRole(userId: string) {
     this.logger.debug(`Resolving app permissions for userId=${userId} `);
 

@@ -70,9 +70,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       errorCode,
       message: isDev ? message : this.sanitize(statusCode, message),
       timestamp: new Date().toISOString(),
-      ...(isDev && typeof ms === 'number' && { ms }),
       path: req.url,
-      correlationId,
+      ...(isDev && typeof ms === 'number' && { ms }),
+      ...(isDev ? { correlationId } : {}),
       ...(validationErrors && { errors: validationErrors }),
       ...(isDev && { stack: (exception as Error)?.stack, context }),
     };
@@ -103,15 +103,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         exception instanceof AppException
           ? (exception.context.action ?? exception.errorCode)
           : 'UNHANDLED',
-      correlationId: response.correlationId,
       statusCode,
       errorCode: response.errorCode,
       message: response.message,
       ms: response.ms,
       path: request.url,
       method: request.method,
-      userId: request.user?.id ?? 'anonymous',
-      ip: request.ip,
       userAgent: request.headers['user-agent'],
       context:
         exception instanceof AppException ? exception.context : undefined,
@@ -133,7 +130,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     if ([401, 403, 429].includes(statusCode)) {
       this.emiter.emit(AppEvents.SECURITY_ERROR, {
         action: AppEvents.SECURITY_ERROR,
-        actorId: logPayload.userId ?? 'anonymous',
+        actorId: this.cls.get<string>('userId') ?? 'anonymous',
+        correlationId: this.cls.get<string>('correlationId') ?? 'anonymous',
         resourceType: 'HTTP',
         resourceId: request.url,
         metadata: logPayload,

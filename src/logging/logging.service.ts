@@ -1,14 +1,17 @@
 import { Injectable, LoggerService as NestLoggerService } from '@nestjs/common';
+import { ClsService } from 'nestjs-cls';
+import { MyClsStore } from 'src/common/interface/cls-store.interface';
 import winston from 'winston';
 import 'winston-daily-rotate-file';
 
 type LogLevel = 'error' | 'warn' | 'info' | 'http' | 'debug';
+type MetaArg = Record<string, any> | string | undefined;
 
 @Injectable()
 export class LoggingService implements NestLoggerService {
   private logger: winston.Logger;
 
-  constructor() {
+  constructor(private readonly cls: ClsService<MyClsStore>) {
     const isDevelopment = process.env.NODE_ENV !== 'production';
 
     winston.addColors({
@@ -32,6 +35,7 @@ export class LoggingService implements NestLoggerService {
         this.buildConsoleTransport(),
         this.buildFileTransport('error', 'error'),
         this.buildFileTransport('combined', 'info'),
+        this.buildFileTransport('/app/app', 'info'),
       ],
       exceptionHandlers: [this.buildFileTransport('exceptions', 'error')],
       rejectionHandlers: [this.buildFileTransport('rejections', 'error')],
@@ -39,10 +43,78 @@ export class LoggingService implements NestLoggerService {
     });
   }
 
+  private normalizeMeta(meta: MetaArg): Record<string, any> {
+    if (typeof meta === 'string') return { context: meta };
+    return meta ?? {};
+  }
+
+  private getMeta() {
+    return {
+      ip: this.cls.get('ip') ?? 'unknown',
+      userId: this.cls.get('userId') ?? 'anonymous',
+      correlationId: this.cls.get('correlationId') ?? 'unknown',
+    };
+  }
+
+  // NestJS LoggerService interface
+  log(message: string, meta?: MetaArg) {
+    this.logger.info(message, {
+      ...this.normalizeMeta(meta),
+      ...this.getMeta(),
+    });
+  }
+  error(message: string, meta?: MetaArg) {
+    this.logger.error(message, {
+      ...this.normalizeMeta(meta),
+      ...this.getMeta(),
+    });
+  }
+  warn(message: string, meta?: MetaArg) {
+    this.logger.warn(message, {
+      ...this.normalizeMeta(meta),
+      ...this.getMeta(),
+    });
+  }
+  debug(message: string, meta?: MetaArg) {
+    this.logger.debug(message, {
+      ...this.normalizeMeta(meta),
+      ...this.getMeta(),
+    });
+  }
+  // NestJS verbose() → winston http level
+  verbose(message: string, meta?: MetaArg) {
+    this.logger.http(message, {
+      ...this.normalizeMeta(meta),
+      ...this.getMeta(),
+    });
+  }
+
+  // Extended helper for Error objects
+  logError(message: string, error?: unknown, meta?: Record<string, unknown>) {
+    const serialized =
+      error instanceof Error
+        ? { message: error.message, stack: error.stack, name: error.name }
+        : { raw: error };
+
+    this.logger.error(message, {
+      error: serialized,
+      ...meta,
+      ...this.getMeta(),
+    });
+  }
+
+  // Returns a child logger — never mutates the singleton
+  child(defaultMeta: Record<string, unknown>): winston.Logger {
+    return this.logger.child(defaultMeta);
+  }
+
+  httpStream() {
+    return { write: (message: string) => this.logger.http(message.trim()) };
+  }
+
   private buildConsoleTransport() {
     return new winston.transports.Console({
       format: winston.format.combine(
-        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
         winston.format.colorize({ all: true }),
         winston.format.printf(
           (info) =>
@@ -55,7 +127,7 @@ export class LoggingService implements NestLoggerService {
 
   private buildFileTransport(filename: string, level: LogLevel) {
     return new winston.transports.DailyRotateFile({
-      filename: `logs/${filename}-%DATE%.log`,
+      filename: `/var/log/${filename}-%DATE%.log`,
       level,
       datePattern: 'YYYY-MM-DD',
       zippedArchive: true,
@@ -66,39 +138,5 @@ export class LoggingService implements NestLoggerService {
         winston.format.json(),
       ),
     });
-  }
-
-  // NestJS LoggerService interface methods
-  log(message: string, ...meta: any[]) {
-    this.logger.info(message, meta);
-  }
-  error(message: string, ...meta: any[]) {
-    this.logger.error(message, meta);
-  }
-  warn(message: string, ...meta: any[]) {
-    this.logger.warn(message, meta);
-  }
-  debug(message: string, ...meta: any[]) {
-    this.logger.debug(message, meta);
-  }
-  verbose(message: string, ...meta: any[]) {
-    this.logger.http(message, meta);
-  }
-
-  // Extended helpers
-  logError(message: string, error?: unknown, meta?: Record<string, unknown>) {
-    const serialized =
-      error instanceof Error
-        ? { message: error.message, stack: error.stack, name: error.name }
-        : { raw: error };
-    this.logger.error(message, { error: serialized, ...meta });
-  }
-
-  httpStream() {
-    return { write: (message: string) => this.logger.http(message.trim()) };
-  }
-
-  child(defaultMeta: Record<string, unknown>) {
-    this.logger = this.logger.child(defaultMeta);
   }
 }

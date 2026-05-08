@@ -15,7 +15,6 @@ export class AppPermissionsGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly appPermissionsService: AppPermissionsService,
     private readonly logger: LoggingService,
-    private readonly eventBus: EventBusService,
   ) {
     this.logger.child({ context: AppPermissionsGuard.name });
   }

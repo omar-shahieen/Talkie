@@ -10,6 +10,7 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { FilesService } from './files.service';
 import { UploadMessageFilesDto } from './dtos/upload-message-files.dto';
 import { type AuthenticatedRequest } from '../auth/types/authenticated-request.type';
+import { type FileUploadResult } from './files.types';
 
 import { BadRequestException } from 'src/common/exceptions/domain.exception';
 import { MAX_UPLOAD_FILES } from 'src/friends/upload.constant';
@@ -25,9 +26,9 @@ export class FilesController {
   )
   async uploadFiles(
     @Body() dto: UploadMessageFilesDto,
-    @UploadedFiles() files: Array<Express.Multer.File>,
+    @UploadedFiles() files: Express.Multer.File[],
     @Req() req: AuthenticatedRequest,
-  ): Promise<{ count: number; attachments: Array<Record<string, unknown>> }> {
+  ): Promise<FileUploadResult> {
     if (!files?.length) {
       throw new BadRequestException('No files uploaded');
     }

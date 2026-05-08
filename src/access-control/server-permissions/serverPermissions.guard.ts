@@ -2,7 +2,6 @@ import {
   CanActivate,
   ContextType,
   ExecutionContext,
-  ForbiddenException,
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -13,8 +12,9 @@ import { AppEvents } from '../../events/events.enum';
 import { Request } from 'express';
 import { PERMISSION_SERVER_KEY } from './requireServerPermission.decorator';
 import { ServerPermissionsService } from './serverPermissions.service';
+import { ForbiddenException } from 'src/common/exceptions/domain.exception';
 
-// ── Dedicated types ──────────────────────────────────────────────────────────
+// ──  types ──────────────────────────────────────────────────────────
 
 interface AuthenticatedUser {
   email?: string;
@@ -58,10 +58,7 @@ export class ServerPermissionsGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly permissionsService: ServerPermissionsService,
     private readonly logger: LoggingService,
-    private readonly eventBus: EventBusService,
-  ) {
-    this.logger.child({ context: ServerPermissionsGuard.name });
-  }
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredPermissions = this.reflector.getAllAndOverride<bigint[]>(
@@ -103,22 +100,11 @@ export class ServerPermissionsGuard implements CanActivate {
         effectivePermissions: perms.toJSON(),
       };
 
-      this.logger.warn('Permission denied', {
-        action: 'canActivate',
-        userId,
-        serverId,
-        channelId,
-        requiredPermissions: requiredPermissions.map((p) => p.toString()),
-      });
-      this.eventBus.emit(AppEvents.PERMISSION_DENIED, payload);
-
       throw new ForbiddenException(
         'You do not have the required permissions for this channel action.',
         {
           action: 'canActivate',
-          userId,
-          serverId,
-          channelId,
+          ...payload,
         },
       );
     }

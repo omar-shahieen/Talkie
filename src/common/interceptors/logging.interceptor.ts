@@ -7,17 +7,19 @@ import {
 } from '@nestjs/common';
 import { Observable, throwError } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { ClsService } from 'nestjs-cls';
 import { LoggingService } from '../../logging/logging.service';
 import { MyClsStore } from '../interface/cls-store.interface';
 import { AuthenticatedRequest } from 'src/auth/types/authenticated-request.type';
+import { MetricsService } from '../metrics/metrics.service';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
   constructor(
     private readonly cls: ClsService<MyClsStore>,
     private readonly logger: LoggingService,
+    private readonly metrics: MetricsService,
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
@@ -42,6 +44,14 @@ export class LoggingInterceptor implements NestInterceptor {
           statusCode: res.statusCode,
           ms: Date.now() - start,
         });
+
+        this.metrics.recordRequest(
+          req.method,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          (req.route?.path as string) ?? req.url,
+          res.statusCode,
+          Date.now() - start,
+        );
       }),
       catchError((err: unknown) => {
         const ms = Date.now() - start;

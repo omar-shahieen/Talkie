@@ -14,7 +14,8 @@ export class ErrorResponseDto {
   @IsString()
   path!: string;
   @IsUUID()
-  correlationId!: string;
+  correlationId?: string;
+  @IsInt()
   ms?: number;
   // Only included in development
   stack?: string;

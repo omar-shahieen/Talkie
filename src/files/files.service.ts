@@ -11,6 +11,10 @@ import { ServerMember } from '../servers/entities/server-member.entity';
 import { LoggingService } from '../logging/logging.service';
 import { type AuthenticatedRequest } from '../auth/types/authenticated-request.type';
 import {
+  type FileUploadResult,
+  type UploadedFileAttachment,
+} from './files.types';
+import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
@@ -40,11 +44,11 @@ export class FilesService {
     channelId: string,
     files: Express.Multer.File[],
     req: AuthenticatedRequest,
-  ): Promise<{ count: number; attachments: Array<Record<string, unknown>> }> {
+  ): Promise<FileUploadResult> {
     await this.assertCanUploadToChannel(channelId, req.user.id);
 
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const attachments: Array<Record<string, unknown>> = [];
+    const attachments: UploadedFileAttachment[] = [];
 
     for (const file of files) {
       const processed = file.mimetype.startsWith('image/')
