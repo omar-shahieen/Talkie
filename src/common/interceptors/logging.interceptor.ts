@@ -32,20 +32,21 @@ export class LoggingInterceptor implements NestInterceptor {
     const baseMeta = {
       context: LoggingInterceptor.name,
       method: req.method,
-      url: req.url,
+      // Use path to avoid logging query strings and potentially sensitive data
+      url: req.path,
       correlationId: this.cls.get<string>('correlationId'),
       userId: this.cls.get<string>('userId'),
       ip: this.cls.get<string>('ip'),
     };
 
-    this.logger.log(`→ ${req.method} ${req.url}`, baseMeta);
+    this.logger.log(`→ ${req.method} ${req.path}`, baseMeta);
 
     return next.handle().pipe(
       tap(() => {
         const route =
-          (req.route as { path?: string } | undefined)?.path ?? req.url;
+          (req.route as { path?: string } | undefined)?.path ?? req.path;
 
-        this.logger.log(`← ${req.method} ${req.url}`, {
+        this.logger.log(`← ${req.method} ${req.path}`, {
           ...baseMeta,
           statusCode: res.statusCode,
           ms: Date.now() - start,

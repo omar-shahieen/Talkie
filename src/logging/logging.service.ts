@@ -38,8 +38,8 @@ export class LoggingService implements NestLoggerService {
       transports: [
         this.buildConsoleTransport(),
         this.buildFileTransport('error', 'error'),
-        this.buildFileTransport('combined', 'info'),
-        this.buildFileTransport('/app/app', 'info'),
+        this.buildFileTransport('app', 'info'),
+        ...(isDevelopment ? [this.buildFileTransport('debug', 'debug')] : []),
       ],
       exceptionHandlers: [this.buildFileTransport('exceptions', 'error')],
       rejectionHandlers: [this.buildFileTransport('rejections', 'error')],
@@ -154,7 +154,7 @@ export class LoggingService implements NestLoggerService {
 
   private buildFileTransport(filename: string, level: LogLevel) {
     return new winston.transports.DailyRotateFile({
-      filename: `/var/log/${filename}-%DATE%.log`,
+      filename: `/var/log/app/${filename}-%DATE%.log`,
       level,
       datePattern: 'YYYY-MM-DD',
       zippedArchive: true,

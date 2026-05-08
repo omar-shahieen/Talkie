@@ -130,7 +130,11 @@ export class AuthService {
       method: 'password-or-oauth',
     });
 
-    return { access_token, refresh_token };
+    return {
+      message: 'Signed in successfully.',
+      access_token,
+      refresh_token,
+    };
   }
 
   async changePassword(
@@ -166,7 +170,7 @@ export class AuthService {
     user.password = newPassword;
     await this.usersRepository.save(user); // save the new password hashed
 
-    return { message: 'password changed successfully' };
+    return { message: 'Password updated successfully.' };
   }
   async forgetPassword(email: string, fullurl: string) {
     const user = await this.usersRepository.findOneBy({ email });
@@ -196,7 +200,9 @@ export class AuthService {
       });
     }
 
-    return { message: 'if user exist, email is sent to the mail box' };
+    return {
+      message: 'If the account exists, a password reset email has been sent.',
+    };
   }
 
   async resetPassword(newPassword: string, resetToken: string) {

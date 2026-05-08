@@ -4,7 +4,9 @@
 /build
 
 # Logs
-logs
+/logs
+/log
+/var
 *.log
 npm-debug.log*
 pnpm-debug.log*

@@ -24,7 +24,7 @@ export class NotificationsService {
       userId,
     });
 
-    return { success: true };
+    return { message: 'Notification marked as read successfully.' };
   }
 
   async findUserNotifications(userId: string) {

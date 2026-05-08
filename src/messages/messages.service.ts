@@ -174,7 +174,11 @@ export class MessagesService {
     }
 
     if (message.isDeleted) {
-      return { success: true, softDeleted: true, hardDeleteQueued: true };
+      return {
+        message: 'Message deleted successfully.',
+        softDeleted: true,
+        hardDeleteQueued: true,
+      };
     }
 
     message.isDeleted = true;
@@ -191,7 +195,11 @@ export class MessagesService {
 
     void this.deleteMessageFromElastic(message.id);
 
-    return { success: true, softDeleted: true, hardDeleteQueued: true };
+    return {
+      message: 'Message deleted successfully.',
+      softDeleted: true,
+      hardDeleteQueued: true,
+    };
   }
 
   async hardDeleteSoftDeletedMessage(messageId: string) {
@@ -419,7 +427,7 @@ export class MessagesService {
       userId,
     });
 
-    return { success: true };
+    return { message: 'Reaction removed successfully.' };
   }
 
   async search(query: SearchMessagesDto) {

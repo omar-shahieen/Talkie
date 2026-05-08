@@ -111,7 +111,7 @@ export class InvitationsService {
       await manager.save(invite);
     });
 
-    return { message: 'user added' };
+    return { message: 'Invitation accepted successfully.' };
   }
 
   async removeInvitation(userId: string, inviteCode: string) {
@@ -130,7 +130,7 @@ export class InvitationsService {
 
     await this.invitationsRepository.softDelete({ inviteCode });
 
-    return { message: 'invite is revoked successfully' };
+    return { message: 'Invitation revoked successfully.' };
   }
   async getUserMemberInvites(userId: string) {
     return this.invitationsRepository.find({

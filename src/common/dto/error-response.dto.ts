@@ -1,4 +1,4 @@
-import { IsInt, IsString, IsUUID, Max, Min } from 'class-validator';
+import { IsInt, IsString, IsUUID, Max, Min, IsOptional } from 'class-validator';
 
 export class ErrorResponseDto {
   success: boolean = false;
@@ -15,11 +15,16 @@ export class ErrorResponseDto {
   @IsString()
   path!: string;
   @IsUUID()
+  @IsOptional()
+  @IsUUID()
   correlationId?: string;
+  @IsOptional()
   @IsInt()
   ms?: number;
   // Only included in development
+  @IsOptional()
   stack?: string;
   // Only for validation errors
+  @IsOptional()
   errors?: Record<string, string[]>;
 }

@@ -128,7 +128,7 @@ export class UsersService {
 
     await this.usersRepository.softRemove(user);
 
-    return { message: 'User deleted successfully' };
+    return { message: 'User account deleted successfully.' };
   }
 
   async searchByUsername(q: string, requesterId: string) {

@@ -31,7 +31,7 @@ export class TransformInterceptor implements NestInterceptor {
 
           const response: SuccessResponseDto = {
             success: true,
-            message: message || 'Request processed successfully',
+            message: message || 'Operation completed successfully',
             results: results,
             timestamp: new Date().toISOString(),
           };

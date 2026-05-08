@@ -41,18 +41,8 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
-    }),
-  );
-
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
       transform: true,
-      disableErrorMessages: process.env.NODE_ENV == 'development',
+      disableErrorMessages: process.env.NODE_ENV !== 'development',
       transformOptions: {
         enableImplicitConversion: true,
       },
@@ -85,4 +75,7 @@ async function bootstrap() {
     'NestApplication',
   );
 }
-bootstrap();
+void bootstrap().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

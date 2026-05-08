@@ -1,0 +1,28 @@
+# docker-compose.monitoring.yml
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - '9090:9090'
+
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - '3100:3100'
+
+  promtail: # ships your log file → Loki
+    image: grafana/promtail:latest
+    volumes:
+      - /var/log/app:/var/log/app # same path as Winston file transport
+      - ./monitoring/promtail.yml:/etc/promtail/config.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - '3001:3000'
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
