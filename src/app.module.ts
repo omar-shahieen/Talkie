@@ -33,6 +33,7 @@ import { AppPermissionsGuard } from './access-control/app-permissions/appPermiss
 import { CorrelationIdInterceptor } from './common/interceptors/correlation-id.interceptor';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { FilesModule } from './files/files.module';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 
 @Module({
   imports: [
@@ -118,6 +119,16 @@ import { FilesModule } from './files/files.module';
         mount: true,
       },
     }),
+    // register promotheous for metrics
+
+    PrometheusModule.register({
+      //GET /metrics
+      defaultMetrics: { enabled: true }, // CPU, memory, event loop lag — free
+      defaultLabels: {
+        app: 'Talkie',
+      },
+    }),
+
     // GLOBAL MODULES
     AuthModule,
     EventsModule,

@@ -10,9 +10,7 @@ export class MessageRetentionQueueService {
     @InjectQueue(MESSAGE_QUEUE)
     private readonly queue: Queue,
     private readonly logger: LoggingService,
-  ) {
-    this.logger.child({ context: MessageRetentionQueueService.name });
-  }
+  ) {}
 
   async enqueueHardDelete(messageId: string) {
     await this.queue.add(
@@ -28,7 +26,12 @@ export class MessageRetentionQueueService {
 
     this.logger.log(
       `Queued hard-delete for message ${messageId} after 24 hours`,
-      MessageRetentionQueueService.name,
+      {
+        context: MessageRetentionQueueService.name,
+        action: 'enqueueHardDelete',
+        messageId,
+        delayMs: HARD_DELETE_DELAY_MS,
+      },
     );
   }
 }

@@ -10,9 +10,7 @@ export class MailQueueListener {
   constructor(
     private readonly logger: LoggingService,
     @InjectQueue('mailQueue') private mailQueue: Queue,
-  ) {
-    this.logger.child({ context: MailQueueListener.name });
-  }
+  ) {}
 
   @OnEvent(AppEvents.USER_TFA_ENABLED)
   async handleTfaEnabledEvent(payload: { email: string }) {

@@ -1,4 +1,4 @@
-import {  Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
@@ -41,9 +41,7 @@ export class MessagesService {
     private readonly eventBus: EventBusService,
     private readonly logger: LoggingService,
     private readonly messageRetentionQueue: MessageRetentionQueueService,
-  ) {
-    this.logger.child({ context: MessagesService.name });
-  }
+  ) {}
 
   async create(dto: CreateMessageDto, authorId: string) {
     const channel = await this.channelsRepository.findOneBy({
@@ -176,7 +174,11 @@ export class MessagesService {
     }
 
     if (message.isDeleted) {
-      return { success: true, softDeleted: true, hardDeleteQueued: true };
+      return {
+        message: 'Message deleted successfully.',
+        softDeleted: true,
+        hardDeleteQueued: true,
+      };
     }
 
     message.isDeleted = true;
@@ -193,7 +195,11 @@ export class MessagesService {
 
     void this.deleteMessageFromElastic(message.id);
 
-    return { success: true, softDeleted: true, hardDeleteQueued: true };
+    return {
+      message: 'Message deleted successfully.',
+      softDeleted: true,
+      hardDeleteQueued: true,
+    };
   }
 
   async hardDeleteSoftDeletedMessage(messageId: string) {
@@ -210,10 +216,12 @@ export class MessagesService {
     await this.refreshChannelLastMessage(message.channelId);
     await this.deleteMessageFromElastic(message.id);
 
-    this.logger.log(
-      `Hard-deleted soft-deleted message ${message.id}`,
-      MessagesService.name,
-    );
+    this.logger.log(`Hard-deleted soft-deleted message ${message.id}`, {
+      context: MessagesService.name,
+      action: 'hardDeleteSoftDeletedMessage',
+      messageId: message.id,
+      channelId: message.channelId,
+    });
   }
 
   async listChannelMessages(channelId: string, query: MessagePaginationDto) {
@@ -419,7 +427,7 @@ export class MessagesService {
       userId,
     });
 
-    return { success: true };
+    return { message: 'Reaction removed successfully.' };
   }
 
   async search(query: SearchMessagesDto) {
@@ -449,6 +457,7 @@ export class MessagesService {
         };
       } catch (error) {
         this.logger.warn('Elasticsearch search failed, fallback to postgres', {
+          context: MessagesService.name,
           action: 'search',
           error: String(error),
         });
@@ -626,6 +635,7 @@ export class MessagesService {
       });
     } catch (error) {
       this.logger.warn('Elasticsearch sync failed for message', {
+        context: MessagesService.name,
         action: 'syncMessageToElastic',
         messageId: message.id,
         error: String(error),
@@ -643,6 +653,7 @@ export class MessagesService {
       });
     } catch (error) {
       this.logger.warn('Elasticsearch delete failed for message', {
+        context: MessagesService.name,
         action: 'deleteMessageFromElastic',
         messageId,
         error: String(error),

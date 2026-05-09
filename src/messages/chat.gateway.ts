@@ -30,6 +30,7 @@ import type {
 } from './chat.types';
 import { PresenceService } from '../presence/presence.service';
 import { ChannelsService } from '../channels/channels.service';
+import { MetricsService } from 'src/common/metrics/metrics.service';
 
 @Injectable()
 @WebSocketGateway({
@@ -48,9 +49,8 @@ export class ChatGateway
     private readonly usersService: UsersService,
     private readonly presenceService: PresenceService,
     private readonly channelsService: ChannelsService,
-  ) {
-    this.logger.child({ context: ChatGateway.name });
-  }
+    private readonly metrics: MetricsService,
+  ) {}
   afterInit(server: Server) {
     server.use((socket, next) => {
       this.socketAuthMiddleware.use(socket, next);
@@ -70,6 +70,9 @@ export class ChatGateway
 
     void client.join(`user:${userId}`);
 
+    const count = this.server.sockets.sockets.size;
+    this.metrics.setWsConnections(count); // after a client connects
+
     try {
       // 1. Get restored status BEFORE adding connection
       const restoredStatus =
@@ -79,7 +82,7 @@ export class ChatGateway
       const wasOffline = await this.presenceService.addConnections(
         userId,
         client.id,
-        restoredStatus, // ← pass it in
+        restoredStatus,
       );
 
       if (wasOffline) {
@@ -109,6 +112,9 @@ export class ChatGateway
       await this.broadcastToSharedContexts(userId, 'offline');
       this.logger.log(` user : ${userId} go offline`);
     }
+
+    const count = this.server.sockets.sockets.size;
+    this.metrics.setWsConnections(count); // after a client disconnects
   }
 
   @SubscribeMessage('server:join')

@@ -12,12 +12,10 @@ import { MessageAttachment } from './entities/message-attachment.entity';
 import { MessageReaction } from './entities/message-reaction.entity';
 import { ChannelMember } from '../channels/entities/channel-member.entity';
 import { BullModule } from '@nestjs/bullmq';
-import {
-  MessageRetentionConsumer,
-  MessageRetentionQueueService,
-} from './message-retention.queue';
+import { MessageRetentionConsumer } from './message-retention.queue';
 import { ServerMember } from 'src/servers/entities/server-member.entity';
 import { LoggingModule } from 'src/logging/logging.module';
+import { MessageRetentionQueueService } from './message-retention-queue.service';
 
 @Module({
   imports: [

@@ -1,8 +1,9 @@
-import { IsInt, IsString, IsUUID, Max, Min } from 'class-validator';
+import { IsInt, IsString, IsUUID, Max, Min, IsOptional } from 'class-validator';
 
 export class ErrorResponseDto {
+  success: boolean = false;
   @IsInt()
-  @Min(100)
+  @Min(400)
   @Max(600)
   statusCode!: number;
   @IsString()
@@ -14,10 +15,16 @@ export class ErrorResponseDto {
   @IsString()
   path!: string;
   @IsUUID()
-  correlationId!: string;
+  @IsOptional()
+  @IsUUID()
+  correlationId?: string;
+  @IsOptional()
+  @IsInt()
   ms?: number;
   // Only included in development
+  @IsOptional()
   stack?: string;
   // Only for validation errors
+  @IsOptional()
   errors?: Record<string, string[]>;
 }

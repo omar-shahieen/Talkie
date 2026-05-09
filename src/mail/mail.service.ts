@@ -8,9 +8,7 @@ export class MailService {
   constructor(
     private readonly mailerService: MailerService,
     private readonly logger: LoggingService,
-  ) {
-    this.logger.child({ context: MailService.name });
-  }
+  ) {}
   async sendEmail(payload: IMailPayload): Promise<boolean> {
     const { to, subject, template, context, attachments, from } = payload;
 
@@ -25,13 +23,19 @@ export class MailService {
       });
       this.logger.log(
         `Email sent successfully to ${Array.isArray(to) ? to.join(', ') : to} with template '${template}'`,
+        {
+          context: MailService.name,
+          action: 'sendEmail',
+          to,
+          template,
+        },
       );
       return true;
     } catch (error: any) {
       this.logger.logError(
         `Failed to send email to ${Array.isArray(to) ? to.join(', ') : to} with template '${template}'`,
         error,
-        { to, template },
+        { context: MailService.name, action: 'sendEmail', to, template },
       );
       return false;
     }

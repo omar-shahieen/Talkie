@@ -19,9 +19,7 @@ export class NotificationsGateway
   constructor(
     private readonly logger: LoggingService,
     private readonly socketAuthMiddleware: SocketAuthMiddleware,
-  ) {
-    this.logger.child({ context: NotificationsGateway.name });
-  }
+  ) {}
 
   @WebSocketServer()
   server!: Server;
@@ -40,7 +38,11 @@ export class NotificationsGateway
       // If the user logs in on Chrome and a Mobile App,
       // BOTH sockets will now be in the room "user_123"
       void client.join(`user:${userId}`);
-      this.logger.log(`user ${userId} joined notification room`);
+      this.logger.log(`user ${userId} joined notification room`, {
+        context: NotificationsGateway.name,
+        action: 'handleConnection',
+        userId,
+      });
     } else {
       // If someone connected without auth, boot them out
       client.disconnect();
@@ -51,7 +53,11 @@ export class NotificationsGateway
     const userId = client.data.user.id;
     if (userId) {
       void client.leave(`user:${userId}`);
-      this.logger.log(`user ${userId} left notification room`);
+      this.logger.log(`user ${userId} left notification room`, {
+        context: NotificationsGateway.name,
+        action: 'handleDisconnect',
+        userId,
+      });
     }
   }
 

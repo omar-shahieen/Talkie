@@ -2,7 +2,6 @@ import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
 import { LoggingService } from '../../logging/logging.service';
-import { EventBusService } from '../../events/eventBus.service';
 
 import { AppPermissionsService } from './appPermissions.service';
 import { AppRole } from 'src/users/entities/user.entity';
@@ -15,10 +14,7 @@ export class AppPermissionsGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly appPermissionsService: AppPermissionsService,
     private readonly logger: LoggingService,
-    private readonly eventBus: EventBusService,
-  ) {
-    this.logger.child({ context: AppPermissionsGuard.name });
-  }
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredPermissions = this.reflector.getAllAndOverride<AppRole[]>(
