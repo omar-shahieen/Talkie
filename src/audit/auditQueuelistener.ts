@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { Queue } from 'bullmq';
 import { AppEvents } from 'src/events/events.enum';
-import { AUDIT_QUEUE } from './audit.module';
+import { AUDIT_QUEUE } from './audit.constants';
 import { ClsService } from 'nestjs-cls';
 import { MyClsStore } from 'src/common/interface/cls-store.interface';
 

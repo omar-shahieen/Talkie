@@ -1,8 +1,10 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
@@ -17,6 +19,7 @@ import { UpdateMessageDto } from './dtos/update-message.dto';
 import { MessagePaginationDto } from './dtos/pagination.dto';
 import { MessageReactionDto } from './dtos/reaction.dto';
 import { SearchMessagesDto } from './dtos/search-messages.dto';
+import { Public } from 'src/auth/decorators/public.decorator';
 
 @Controller('messages')
 export class MessagesController {
@@ -25,6 +28,21 @@ export class MessagesController {
   @Post()
   create(@Body() dto: CreateMessageDto, @Req() req: AuthenticatedRequest) {
     return this.messagesService.create(dto, req.user.id);
+  }
+
+  @Public()
+  @Post('guest')
+  createGuest(
+    @Body() dto: CreateMessageDto,
+    @Headers('x-guest-user-id') guestUserId?: string,
+  ) {
+    const uuidV4Regex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!guestUserId || !uuidV4Regex.test(guestUserId)) {
+      throw new BadRequestException('x-guest-user-id must be a valid UUID v4');
+    }
+
+    return this.messagesService.create(dto, guestUserId);
   }
 
   @Patch(':id')

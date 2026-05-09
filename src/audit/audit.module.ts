@@ -6,8 +6,7 @@ import { AuditLog } from './auditLog.entity';
 import { BullModule } from '@nestjs/bullmq';
 import { AuditWorker } from './auditLogger.worker';
 import { AuditQueueListener } from './auditQueuelistener';
-
-export const AUDIT_QUEUE: string = 'audit-events';
+import { AUDIT_QUEUE } from './audit.constants';
 
 @Module({
   imports: [

@@ -3,8 +3,9 @@ import { Job } from 'bullmq';
 import { AppEvents } from '../events/events.enum';
 import { LoggingService } from '../logging/logging.service';
 import { AuditService } from './audit.service';
+import { AUDIT_QUEUE } from './audit.constants';
 
-@Processor('auditQueue')
+@Processor(AUDIT_QUEUE)
 export class AuditWorker extends WorkerHost {
   constructor(
     private readonly auditService: AuditService,

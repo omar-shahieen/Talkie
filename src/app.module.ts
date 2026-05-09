@@ -34,6 +34,7 @@ import { CorrelationIdInterceptor } from './common/interceptors/correlation-id.i
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { FilesModule } from './files/files.module';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
+import { MetricsModule } from './common/metrics/metrics.module';
 
 @Module({
   imports: [
@@ -149,6 +150,7 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus';
     InvitationsModule,
     FriendsModule,
     FilesModule,
+    MetricsModule,
   ],
   controllers: [AppController],
   providers: [

@@ -16,6 +16,7 @@ import { MessageRetentionConsumer } from './message-retention.queue';
 import { ServerMember } from 'src/servers/entities/server-member.entity';
 import { LoggingModule } from 'src/logging/logging.module';
 import { MessageRetentionQueueService } from './message-retention-queue.service';
+import { MetricsModule } from 'src/common/metrics/metrics.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { MessageRetentionQueueService } from './message-retention-queue.service'
     ChannelsModule,
     UsersModule,
     LoggingModule,
+    MetricsModule,
   ],
   controllers: [MessagesController],
   providers: [
