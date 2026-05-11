@@ -1,6 +1,6 @@
-# Discord Backend API
+# Talkie Backend API
 
-A production-oriented Discord-like backend built with NestJS and TypeScript.
+A production-oriented backend built with NestJS and TypeScript.
 
 It supports:
 
