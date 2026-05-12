@@ -319,6 +319,15 @@ export class ChatGateway
     );
   }
 
+  @OnEvent(AppEvents.MESSAGE_DELETED_FOR_EVERYONE)
+  handleMessageDeletedForEveryone(payload: Record<string, unknown>) {
+    this.emitToChannel(
+      this.readString(payload, 'channelId'),
+      'message:deletedForEveryone',
+      payload,
+    );
+  }
+
   @OnEvent(AppEvents.MESSAGE_REACTION_ADDED)
   handleReactionAdded(payload: Record<string, unknown>) {
     this.emitToChannel(

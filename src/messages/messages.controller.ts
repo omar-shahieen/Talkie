@@ -55,7 +55,15 @@ export class MessagesController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+  remove(
+    @Param('id') id: string,
+    @Query('scope') scope: string | undefined,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    if (scope === 'everyone') {
+      return this.messagesService.removeForEveryone(id, req.user.id);
+    }
+
     return this.messagesService.remove(id, req.user.id);
   }
 

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { Repository } from 'typeorm';
+import { Brackets, Repository } from 'typeorm';
 import { LoggingService } from '../logging/logging.service';
 import { ServerMember } from '../servers/entities/server-member.entity';
 import { UpdateUserDto } from './dtos/updateUser.dto';
@@ -113,7 +113,19 @@ export class UsersService {
   }
 
   async getProfile(userId: string) {
-    const user = await this.findUserOrThrow(userId);
+    const user = await this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.appRole')
+      .where('user.id = :userId', { userId })
+      .getOne();
+
+    if (!user) {
+      throw new NotFoundException('user', userId, {
+        userId,
+        message: 'User account not found or has been deleted.',
+      });
+    }
+
     return user;
   }
   async updateProfile(userId: string, dto: UpdateUserDto) {
@@ -132,11 +144,35 @@ export class UsersService {
   }
 
   async searchByUsername(q: string, requesterId: string) {
+    const normalized = q.trim();
+
     return this.usersRepository
       .createQueryBuilder('user')
-      .select(['user.id', 'user.username', 'user.avatar'])
-      .where('u.username ILIKE :q', { q: `${q}%` })
-      .andWhere('u.id != :requesterId', { requesterId }) // exclude self
+      .select([
+        'user.id',
+        'user.username',
+        'user.firstName',
+        'user.lastName',
+        'user.email',
+        'user.avatar',
+      ])
+      .where(
+        new Brackets((qb) => {
+          qb.where('LOWER(user.username) LIKE LOWER(:prefix)', {
+            prefix: `${normalized}%`,
+          })
+            .orWhere('LOWER(user.firstName) LIKE LOWER(:prefix)', {
+              prefix: `${normalized}%`,
+            })
+            .orWhere('LOWER(user.lastName) LIKE LOWER(:prefix)', {
+              prefix: `${normalized}%`,
+            })
+            .orWhere('LOWER(user.email) LIKE LOWER(:prefix)', {
+              prefix: `${normalized}%`,
+            });
+        }),
+      )
+      .andWhere('user.id != :requesterId', { requesterId }) // exclude self
       .limit(20)
       .getMany();
   }

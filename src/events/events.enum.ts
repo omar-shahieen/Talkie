@@ -14,6 +14,7 @@ export enum AppEvents {
   MESSAGE_CREATED = 'message.created',
   MESSAGE_UPDATED = 'message.updated',
   MESSAGE_DELETED = 'message.deleted',
+  MESSAGE_DELETED_FOR_EVERYONE = 'message.deleted.forEveryone',
   MESSAGE_REACTION_ADDED = 'message.reaction.added',
   MESSAGE_REACTION_REMOVED = 'message.reaction.removed',
   TYPING_STARTED = 'channel.typing.started',

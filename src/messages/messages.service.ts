@@ -21,6 +21,7 @@ import {
   ForbiddenException,
 } from 'src/common/exceptions/domain.exception';
 import { MessageRetentionQueueService } from './message-retention-queue.service';
+import { DELETE_FOR_EVERYONE_WINDOW_MS } from './message.constant';
 
 interface ElasticHit {
   _id: string;
@@ -198,6 +199,64 @@ export class MessagesService {
     return {
       message: 'Message deleted successfully.',
       softDeleted: true,
+      hardDeleteQueued: true,
+    };
+  }
+
+  async removeForEveryone(id: string, requesterId: string) {
+    const message = await this.messagesRepository.findOneBy({ id });
+    if (!message) {
+      throw new NotFoundException('message', id, {
+        messageId: id,
+        message: 'This message does not exist or has been deleted.',
+      });
+    }
+
+    if (message.authorId !== requesterId) {
+      throw new ForbiddenException('delete message for everyone', {
+        message:
+          'You can only delete your own messages for everyone. Only the message author can perform this action.',
+      });
+    }
+
+    if (message.isDeleted && message.deletedForEveryone) {
+      return {
+        message: 'Message already deleted for everyone.',
+        deletedForEveryone: true,
+      };
+    }
+
+    const elapsedMs = Date.now() - message.createdAt.getTime();
+    if (elapsedMs > DELETE_FOR_EVERYONE_WINDOW_MS) {
+      throw new ForbiddenException('delete message for everyone', {
+        errorCode: 'DELETION_WINDOW_EXPIRED',
+        message:
+          'The 24-hour window for deleting this message for everyone has expired. You can still delete it for yourself.',
+        createdAt: message.createdAt.toISOString(),
+        windowMs: DELETE_FOR_EVERYONE_WINDOW_MS,
+      });
+    }
+
+    message.isDeleted = true;
+    message.deletedForEveryone = true;
+    message.deletedAt = new Date();
+    message.content = '';
+    await this.messagesRepository.save(message);
+    await this.refreshChannelLastMessage(message.channelId);
+    await this.messageRetentionQueue.enqueueHardDelete(message.id);
+
+    this.eventBus.emit(AppEvents.MESSAGE_DELETED_FOR_EVERYONE, {
+      id: message.id,
+      channelId: message.channelId,
+      deletedAt: message.deletedAt,
+      deletedForEveryone: true,
+    });
+
+    void this.deleteMessageFromElastic(message.id);
+
+    return {
+      message: 'Message deleted for everyone.',
+      deletedForEveryone: true,
       hardDeleteQueued: true,
     };
   }

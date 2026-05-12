@@ -40,6 +40,9 @@ export class Message {
   @Column({ type: 'timestamptz', nullable: true })
   deletedAt?: Date;
 
+  @Column({ default: false })
+  deletedForEveryone!: boolean;
+
   @CreateDateColumn()
   createdAt!: Date;
 
