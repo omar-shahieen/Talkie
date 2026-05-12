@@ -38,6 +38,8 @@ export class MessagesService {
     private readonly channelMembersRepository: Repository<ChannelMember>,
     @InjectRepository(MessageReaction)
     private readonly reactionsRepository: Repository<MessageReaction>,
+    @InjectRepository(User)
+    private readonly usersRepository: Repository<User>,
     private readonly dataSource: DataSource,
     private readonly eventBus: EventBusService,
     private readonly logger: LoggingService,
@@ -114,7 +116,17 @@ export class MessagesService {
       });
     });
 
-    await this.emitMessageCreatedEvents(created, channel, dto.mentions ?? []);
+    const author = await this.usersRepository.findOne({
+      where: { id: authorId },
+      select: ['id', 'username', 'firstName', 'lastName', 'avatar'],
+    });
+
+    await this.emitMessageCreatedEvents(
+      created,
+      channel,
+      dto.mentions ?? [],
+      author,
+    );
     void this.syncMessageToElastic(created, channel);
 
     return created;
@@ -571,6 +583,7 @@ export class MessagesService {
     message: Message,
     channel: Channel,
     mentions: string[],
+    author?: User | null,
   ) {
     const basePayload: Record<string, unknown> = {
       id: message.id,
@@ -579,6 +592,15 @@ export class MessagesService {
       authorId: message.authorId,
       createdAt: message.createdAt,
       serverId: channel.serverId,
+      user: author
+        ? {
+            id: author.id,
+            name:
+              author.firstName + (author.lastName ? ` ${author.lastName}` : ''),
+            username: author.username,
+            avatar: author.avatar,
+          }
+        : undefined,
     };
 
     if (channel.type === ChannelType.DM) {

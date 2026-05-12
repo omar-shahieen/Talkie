@@ -278,7 +278,7 @@ export class ServersService {
 
     // build frontend url
 
-    const frontendUrl = `${this.configService.get<string>('FRONTEND_END_URL')}/invite/${inviteCode}`;
+    const frontendUrl = `${this.configService.get<string>('FRONTEND_APP_URL')}/invite/${inviteCode}`;
 
     return frontendUrl;
   }

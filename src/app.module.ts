@@ -75,6 +75,11 @@ import { MetricsModule } from './common/metrics/metrics.module';
           port: configService.get<number>('REDIS_PORT'),
           username: configService.get<string>('REDIS_USERNAME', 'default'),
           password: configService.get<string>('REDIS_PASSWORD'),
+          ...(configService.get('REDIS_TLS') === 'true' && {
+            tls: {
+              rejectUnauthorized: false,
+            },
+          }),
         },
         defaultJobOptions: {
           attempts: 3,
@@ -106,6 +111,11 @@ import { MetricsModule } from './common/metrics/metrics.module';
             port: config.get<number>('REDIS_PORT'),
             username: config.get<string>('REDIS_USERNAME', 'default'),
             password: config.get<string>('REDIS_PASSWORD'),
+            ...(config.get('REDIS_TLS') === 'true' && {
+              tls: {
+                rejectUnauthorized: false,
+              },
+            }),
           }),
         ),
       }),

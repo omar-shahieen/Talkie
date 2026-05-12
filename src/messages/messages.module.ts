@@ -17,6 +17,7 @@ import { ServerMember } from 'src/servers/entities/server-member.entity';
 import { LoggingModule } from 'src/logging/logging.module';
 import { MessageRetentionQueueService } from './message-retention-queue.service';
 import { MetricsModule } from 'src/common/metrics/metrics.module';
+import { User } from 'src/users/entities/user.entity';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { MetricsModule } from 'src/common/metrics/metrics.module';
       ServerMember,
       MessageAttachment,
       MessageReaction,
+      User,
     ]),
     PresenceModule,
     ChannelsModule,

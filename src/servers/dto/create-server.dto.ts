@@ -5,7 +5,8 @@ export class CreateServerDto {
   name!: string;
 
   @IsString()
-  ownerId!: string;
+  @IsOptional()
+  ownerId?: string;
 
   @IsBoolean()
   @IsOptional()

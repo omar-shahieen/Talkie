@@ -150,6 +150,7 @@ export class ChatGateway
     }
     void client.join(this.serverRoom(payload.serverId));
     void client.join(this.channelRoom(payload.channelId));
+    this.logger.log(`User ${client.data.user.id} joined channel room: ${payload.channelId}`);
     return { event: 'channel:joined', ...payload };
   }
 
@@ -175,6 +176,7 @@ export class ChatGateway
       throw new WsException('user is Forbidden to join this channel');
     }
     void client.join(this.channelRoom(payload.channelId));
+    this.logger.log(`User ${client.data.user.id} joined DM room: ${payload.channelId}`);
     return { event: 'dm:joined', channelId: payload.channelId };
   }
 
@@ -274,6 +276,7 @@ export class ChatGateway
     this.server
       .to(this.channelRoom(channelId))
       .emit('message:created', payload);
+    this.logger.log(`Broadcasted message:created to room: ${channelId}`);
 
     // emit unread trigger
     if (serverId) {
@@ -410,6 +413,7 @@ export class ChatGateway
       return;
     }
 
+    this.logger.log(`Emitting event ${event} to room: ${channelId}`);
     this.server.to(this.channelRoom(channelId)).emit(event, payload);
   }
 

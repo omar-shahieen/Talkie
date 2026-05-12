@@ -24,7 +24,11 @@ export class ServersController {
   constructor(private readonly serversService: ServersService) {}
 
   @Post()
-  create(@Body() createServerDto: CreateServerDto) {
+  create(
+    @Body() createServerDto: CreateServerDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    createServerDto.ownerId = req.user.id;
     return this.serversService.create(createServerDto);
   }
 
