@@ -11,7 +11,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import type { Response, Request } from 'express';
+import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { Cookies } from '../common/decorators/cookie.decorator';
 import { Public } from './decorators/public.decorator';
@@ -88,15 +88,12 @@ export class AuthController {
   }
   @Public()
   @Post('forget-passwrod')
-  forgetPassword(
-    @Body() forgetPassowrdDto: ForgetPasswordDto,
-    @Req() req: Request,
-  ) {
-    const protocol = req.protocol;
-    const host = req.get('host');
-
-    const fullUrl = `${protocol}://${host}`;
-    return this.authService.forgetPassword(forgetPassowrdDto.email, fullUrl);
+  forgetPassword(@Body() forgetPassowrdDto: ForgetPasswordDto) {
+    // Password reset links must point at the SPA origin (Vite default :3001), not the API host.
+    const frontendBase =
+      process.env.FRONTEND_APP_URL?.replace(/\/$/, '') ||
+      'http://localhost:3001';
+    return this.authService.forgetPassword(forgetPassowrdDto.email, frontendBase);
   }
   @Public()
   @Post('reset-passwrod')
@@ -123,7 +120,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response, // ← passthrough so NestJS keeps control
   ) {
     const oauthRedirectUrl =
-      process.env.FRONTEND_OAUTH_REDIRECT_URL ?? 'http://localhost:8080/oauth';
+      process.env.FRONTEND_OAUTH_REDIRECT_URL ?? 'http://localhost:3001/oauth';
 
     if (req.user.isTfaEnabled) {
       const tfaLoginToken = await this.authService.createTfaLoginToken(

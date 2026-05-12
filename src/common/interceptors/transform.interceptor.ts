@@ -22,12 +22,20 @@ export class TransformInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       map(
-        (data: {
-          message?: string;
-          results?: Record<string, any>;
-          ms?: number;
-        }): SuccessResponseDto => {
-          const { message, ms, ...results } = data;
+        (
+          data:
+            | {
+                message?: string;
+                results?: Record<string, any>;
+                ms?: number;
+              }
+            | unknown,
+        ): SuccessResponseDto => {
+          const isRecord =
+            data !== null && typeof data === 'object' && !Array.isArray(data);
+          const dataRecord = isRecord ? (data as Record<string, any>) : {};
+          const { message, ms, ...rest } = dataRecord;
+          const results = isRecord ? rest : (data ?? null);
 
           const response: SuccessResponseDto = {
             success: true,

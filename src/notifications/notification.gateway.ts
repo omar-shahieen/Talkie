@@ -69,6 +69,9 @@ export class NotificationsGateway
     this.server
       .to(`user:${notification.recipientId}`)
       .emit('notification:recieved', notification);
+    this.server
+      .to(`user:${notification.recipientId}`)
+      .emit('notification:received', notification);
   }
 
   @OnEvent('notification.markRead')

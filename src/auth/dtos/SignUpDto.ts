@@ -24,6 +24,7 @@ export class SignUpDto {
 
   @IsString()
   @Match('password')
-  @Exclude()
+  /** Omit from serialized responses only; must stay included when reading the request body. */
+  @Exclude({ toPlainOnly: true })
   passwordConfirm!: string;
 }

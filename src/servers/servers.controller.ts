@@ -17,6 +17,7 @@ import { CreateInvitationDto } from './dto/create-invititaion.dto';
 import { type AuthenticatedRequest } from '../auth/types/authenticated-request.type';
 import { Permission } from '../access-control/server-permissions/serverPermissions.constants';
 import { RequireServerPermissions } from 'src/access-control/server-permissions/requireServerPermission.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 
 @Controller('servers')
 export class ServersController {
@@ -37,6 +38,7 @@ export class ServersController {
     return this.serversService.findForUser(userId);
   }
 
+  @Public()
   @Get('discovery/public')
   discover(@Query() query: DiscoverServersDto) {
     return this.serversService.discover(query);

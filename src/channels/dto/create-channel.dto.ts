@@ -1,4 +1,9 @@
+import { IsString, IsUUID } from 'class-validator';
+
 export class CreateChannelDto {
-  name: string;
-  serverId: string;
+  @IsString()
+  name!: string;
+
+  @IsUUID()
+  serverId!: string;
 }

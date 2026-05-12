@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, Patch, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Patch, Query } from '@nestjs/common';
 import { UsersService } from './users.service';
 
 import { type AuthenticatedUser } from 'src/auth/types/authenticated-user.type';
@@ -25,7 +25,7 @@ export class UsersController {
     return this.usersService.getProfile(user.id);
   }
   @Patch('me')
-  upadteMe(@CurrentUser() user: AuthenticatedUser, dto: UpdateUserDto) {
+  upadteMe(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdateUserDto) {
     return this.usersService.updateProfile(user.id, dto);
   }
   @Delete('me')

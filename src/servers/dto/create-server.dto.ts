@@ -1,4 +1,4 @@
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class CreateServerDto {
   @IsString()
@@ -19,7 +19,8 @@ export class CreateServerDto {
   @IsOptional()
   category?: string;
 
-  @IsString()
+  @IsArray()
+  @IsString({ each: true })
   @IsOptional()
   tags?: string[];
 }

@@ -10,7 +10,7 @@ export class SuccessResponseDto {
   timestamp!: string;
 
   @IsOptional()
-  results?: Record<string, any>;
+  results?: unknown;
   // Only included in development
   @IsOptional()
   @IsUUID()

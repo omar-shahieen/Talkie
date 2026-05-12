@@ -12,7 +12,7 @@ export class ResetPasswordDto {
   newPassword!: string;
 
   @IsString()
-  @Match('password')
-  @Exclude() // Excludes it when transforming to a plain object
+  @Match('newPassword')
+  @Exclude({ toPlainOnly: true })
   newPasswordConfirm!: string;
 }
