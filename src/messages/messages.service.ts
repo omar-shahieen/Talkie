@@ -7,6 +7,7 @@ import { Channel, ChannelType } from '../channels/entities/channel.entity';
 import { MessageAttachment } from './entities/message-attachment.entity';
 import { MessageReaction } from './entities/message-reaction.entity';
 import { ChannelMember } from '../channels/entities/channel-member.entity';
+import { User } from '../users/entities/user.entity';
 import { CreateMessageDto } from './dtos/create-message.dto';
 import { UpdateMessageDto } from './dtos/update-message.dto';
 import { MessagePaginationDto } from './dtos/pagination.dto';
