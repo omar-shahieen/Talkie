@@ -9,7 +9,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
-} from 'src/common/exceptions/domain.exception';
+} from '../common/exceptions/domain.exception';
 
 @Injectable()
 export class FriendsService {

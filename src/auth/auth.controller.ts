@@ -24,7 +24,7 @@ import { type AuthenticatedRequest } from './types/authenticated-request.type';
 import { ChangePasswordDto } from './dtos/changePassword.dto';
 import { ForgetPasswordDto } from './dtos/forgetPassowrd.dto';
 import { ResetPasswordDto } from './dtos/resetPassword.dto';
-import { UnauthorizedException } from 'src/common/exceptions/domain.exception';
+import { UnauthorizedException } from '../common/exceptions/domain.exception';
 
 @Controller('auth')
 export class AuthController {
@@ -93,7 +93,10 @@ export class AuthController {
     const frontendBase =
       process.env.FRONTEND_APP_URL?.replace(/\/$/, '') ||
       'http://localhost:3001';
-    return this.authService.forgetPassword(forgetPassowrdDto.email, frontendBase);
+    return this.authService.forgetPassword(
+      forgetPassowrdDto.email,
+      frontendBase,
+    );
   }
   @Public()
   @Post('reset-passwrod')

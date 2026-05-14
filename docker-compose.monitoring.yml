@@ -1,4 +1,3 @@
-# docker-compose.monitoring.yml
 services:
   prometheus:
     image: prom/prometheus:latest
@@ -12,11 +11,16 @@ services:
     ports:
       - '3100:3100'
 
-  promtail: # ships your log file → Loki
-    image: grafana/promtail:latest
+  alloy: # replaces promtail
+    image: grafana/alloy:latest
     volumes:
-      - /var/log/app:/var/log/app # same path as Winston file transport
-      - ./monitoring/promtail.yml:/etc/promtail/config.yml
+      - /var/log/app:/var/log/app # same mount as before
+      - ./monitoring/alloy/config.alloy:/etc/alloy/config.alloy
+    command:
+      - run
+      - /etc/alloy/config.alloy
+    ports:
+      - '12345:12345' # Alloy UI
 
   grafana:
     image: grafana/grafana:latest

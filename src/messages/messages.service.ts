@@ -15,12 +15,12 @@ import { MessageReactionDto } from './dtos/reaction.dto';
 import { SearchMessagesDto } from './dtos/search-messages.dto';
 import { AppEvents } from '../events/events.enum';
 import { LoggingService } from '../logging/logging.service';
-import { EventBusService } from 'src/events/eventBus.service';
+import { EventBusService } from '../events/eventBus.service';
 import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
-} from 'src/common/exceptions/domain.exception';
+} from '../common/exceptions/domain.exception';
 import { MessageRetentionQueueService } from './message-retention-queue.service';
 import { DELETE_FOR_EVERYONE_WINDOW_MS } from './message.constant';
 

@@ -9,7 +9,7 @@ import { Observable } from 'rxjs';
 import { Request, Response } from 'express';
 import { ClsService } from 'nestjs-cls';
 import { MyClsStore } from '../interface/cls-store.interface';
-import { AuthenticatedRequest } from 'src/auth/types/authenticated-request.type';
+import { AuthenticatedRequest } from '../../auth/types/authenticated-request.type';
 
 @Injectable()
 export class CorrelationIdInterceptor implements NestInterceptor {

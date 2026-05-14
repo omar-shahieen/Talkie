@@ -19,7 +19,7 @@ import { UpdateMessageDto } from './dtos/update-message.dto';
 import { MessagePaginationDto } from './dtos/pagination.dto';
 import { MessageReactionDto } from './dtos/reaction.dto';
 import { SearchMessagesDto } from './dtos/search-messages.dto';
-import { Public } from 'src/auth/decorators/public.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 
 @Controller('messages')
 export class MessagesController {

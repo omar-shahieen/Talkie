@@ -18,7 +18,7 @@ import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
-} from 'src/common/exceptions/domain.exception';
+} from '../common/exceptions/domain.exception';
 
 @Injectable()
 export class FilesService {

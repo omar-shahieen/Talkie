@@ -1,6 +1,6 @@
 import { Queue } from 'bullmq';
 import { HARD_DELETE_DELAY_MS, MESSAGE_QUEUE } from './message.constant';
-import { LoggingService } from 'src/logging/logging.service';
+import { LoggingService } from '../logging/logging.service';
 import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 

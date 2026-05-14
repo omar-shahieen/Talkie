@@ -7,8 +7,8 @@ import { DataSource, In, Repository } from 'typeorm';
 import { Permission } from '../access-control/server-permissions/serverPermissions.constants';
 import { ChannelMember } from './entities/channel-member.entity';
 import { ReadState } from './entities/readState.entity';
-import { ServerPermissionsService } from 'src/access-control/server-permissions/serverPermissions.service';
-import { NotFoundException } from 'src/common/exceptions/domain.exception';
+import { ServerPermissionsService } from '../access-control/server-permissions/serverPermissions.service';
+import { NotFoundException } from '../common/exceptions/domain.exception';
 
 @Injectable()
 export class ChannelsService {

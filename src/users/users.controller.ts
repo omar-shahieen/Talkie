@@ -1,13 +1,13 @@
 import { Body, Controller, Delete, Get, Patch, Query } from '@nestjs/common';
 import { UsersService } from './users.service';
 
-import { type AuthenticatedUser } from 'src/auth/types/authenticated-user.type';
-import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { type AuthenticatedUser } from '../auth/types/authenticated-user.type';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UpdateUserDto } from './dtos/updateUser.dto';
 import { SearchUsersDto } from './dtos/search-users.dto';
 import { Throttle } from '@nestjs/throttler';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { RequireAppRole } from 'src/access-control/app-permissions/requireAppRole.decorator';
+import { PaginationDto } from '../common/dto/pagination.dto';
+import { RequireAppRole } from '../access-control/app-permissions/requireAppRole.decorator';
 import { AppRole } from './entities/user.entity';
 
 @Controller('users')

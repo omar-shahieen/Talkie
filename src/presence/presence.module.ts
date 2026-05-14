@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { PresenceService } from './presence.service';
 import { CacheModule } from '@nestjs/cache-manager';
-import { User } from 'src/users/entities/user.entity';
+import { User } from '../users/entities/user.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({

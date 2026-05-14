@@ -1,6 +1,6 @@
 import { Injectable, LoggerService as NestLoggerService } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
-import { MyClsStore } from 'src/common/interface/cls-store.interface';
+import { MyClsStore } from '../common/interface/cls-store.interface';
 import winston from 'winston';
 import 'winston-daily-rotate-file';
 

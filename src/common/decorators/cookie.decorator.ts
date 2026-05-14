@@ -1,6 +1,6 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { Request } from 'express';
-import { UnauthorizedException } from 'src/common/exceptions/domain.exception';
+import { UnauthorizedException } from '../exceptions/domain.exception';
 
 type CookieRequest = Request & {
   cookies?: Record<string, string>;

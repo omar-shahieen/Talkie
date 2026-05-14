@@ -3,7 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { LoggingService } from '../logging/logging.service';
 import { PresenceStatus } from '../messages/chat.types';
 import { Repository } from 'typeorm';
-import { User } from 'src/users/entities/user.entity';
+import { User } from '../users/entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 
 export const PRESENCE_PRIORITIES: Record<PresenceStatus, number> = {

@@ -18,7 +18,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
-} from 'src/common/exceptions/domain.exception';
+} from '../common/exceptions/domain.exception';
 import { LoggingService } from '../logging/logging.service';
 @Injectable()
 export class ServersService {

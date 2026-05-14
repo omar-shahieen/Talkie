@@ -12,8 +12,8 @@ import { UploadMessageFilesDto } from './dtos/upload-message-files.dto';
 import { type AuthenticatedRequest } from '../auth/types/authenticated-request.type';
 import { type FileUploadResult } from './files.types';
 
-import { BadRequestException } from 'src/common/exceptions/domain.exception';
-import { MAX_UPLOAD_FILES } from 'src/friends/upload.constant';
+import { BadRequestException } from '../common/exceptions/domain.exception';
+import { MAX_UPLOAD_FILES } from '../friends/upload.constant';
 import { uploadFileInterceptorConfig } from './files.interceptor';
 
 @Controller('files')

@@ -1,6 +1,6 @@
 scrape_configs:
   - job_name: talkie-backend
     static_configs:
-      - targets: ['host.docker.internal:3000'] #  NestJS app
+      - targets: ['host.docker.internal:3000'] #  NestJS app container
     metrics_path: /metrics
     scrape_interval: 30s

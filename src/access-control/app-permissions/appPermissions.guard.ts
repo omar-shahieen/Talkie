@@ -4,8 +4,8 @@ import { Reflector } from '@nestjs/core';
 import { LoggingService } from '../../logging/logging.service';
 
 import { AppPermissionsService } from './appPermissions.service';
-import { AppRole } from 'src/users/entities/user.entity';
-import { AuthenticatedRequest } from 'src/auth/types/authenticated-request.type';
+import { AppRole } from '../../users/entities/user.entity';
+import { AuthenticatedRequest } from '../../auth/types/authenticated-request.type';
 import { PERMISSION_APP_KEY } from './requireAppRole.decorator';
 
 @Injectable()

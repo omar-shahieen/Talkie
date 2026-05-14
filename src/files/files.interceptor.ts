@@ -10,7 +10,7 @@ import {
   DANGEROUS_EXTENSIONS,
   MAX_UPLOAD_FILES,
 } from '../friends/upload.constant';
-import { BadRequestException } from 'src/common/exceptions/domain.exception';
+import { BadRequestException } from '../common/exceptions/domain.exception';
 
 export const uploadFileInterceptorConfig = {
   storage: memoryStorage(),

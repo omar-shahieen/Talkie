@@ -10,7 +10,7 @@ import { LoggingService } from '../../logging/logging.service';
 import { Request } from 'express';
 import { PERMISSION_SERVER_KEY } from './requireServerPermission.decorator';
 import { ServerPermissionsService } from './serverPermissions.service';
-import { ForbiddenException } from 'src/common/exceptions/domain.exception';
+import { ForbiddenException } from '../../common/exceptions/domain.exception';
 
 // ──  types ──────────────────────────────────────────────────────────
 

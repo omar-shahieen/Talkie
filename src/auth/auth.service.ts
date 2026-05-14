@@ -18,7 +18,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   ForbiddenException,
-} from 'src/common/exceptions/domain.exception';
+} from '../common/exceptions/domain.exception';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

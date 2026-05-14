@@ -13,8 +13,8 @@ import {
 } from '@nestjs/common';
 import { FriendsService } from './friends.service';
 import { SendFriendRequestDto } from './dto/send-request.dto';
-import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-import { type AuthenticatedUser } from 'src/auth/types/authenticated-user.type';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { type AuthenticatedUser } from '../auth/types/authenticated-user.type';
 
 @Controller()
 export class FriendsController {

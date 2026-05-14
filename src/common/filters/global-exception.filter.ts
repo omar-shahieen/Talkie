@@ -9,12 +9,12 @@ import { Request, Response } from 'express';
 import { AppException } from '../exceptions/app.exception';
 
 import { QueryFailedError } from 'typeorm';
-import { LoggingService } from 'src/logging/logging.service';
+import { LoggingService } from '../../logging/logging.service';
 import { ClsService } from 'nestjs-cls';
 import { ErrorResponseDto } from '../dto/error-response.dto';
 import { ValidationException } from '../exceptions/domain.exception';
-import { EventBusService } from 'src/events/eventBus.service';
-import { AppEvents } from 'src/events/events.enum';
+import { EventBusService } from '../../events/eventBus.service';
+import { AppEvents } from '../../events/events.enum';
 import { ConfigService } from '@nestjs/config';
 
 //  Define the shape of a Postgres driver error

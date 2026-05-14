@@ -13,11 +13,11 @@ import { MessageReaction } from './entities/message-reaction.entity';
 import { ChannelMember } from '../channels/entities/channel-member.entity';
 import { BullModule } from '@nestjs/bullmq';
 import { MessageRetentionConsumer } from './message-retention.queue';
-import { ServerMember } from 'src/servers/entities/server-member.entity';
-import { LoggingModule } from 'src/logging/logging.module';
+import { ServerMember } from '../servers/entities/server-member.entity';
+import { LoggingModule } from '../logging/logging.module';
 import { MessageRetentionQueueService } from './message-retention-queue.service';
-import { MetricsModule } from 'src/common/metrics/metrics.module';
-import { User } from 'src/users/entities/user.entity';
+import { MetricsModule } from '../common/metrics/metrics.module';
+import { User } from '../users/entities/user.entity';
 
 @Module({
   imports: [

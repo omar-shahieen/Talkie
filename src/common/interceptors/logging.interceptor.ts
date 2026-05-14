@@ -11,7 +11,7 @@ import { ClsService } from 'nestjs-cls';
 import { ConfigService } from '@nestjs/config';
 import { LoggingService } from '../../logging/logging.service';
 import { MyClsStore } from '../interface/cls-store.interface';
-import { AuthenticatedRequest } from 'src/auth/types/authenticated-request.type';
+import { AuthenticatedRequest } from '../../auth/types/authenticated-request.type';
 import { MetricsService } from '../metrics/metrics.service';
 
 @Injectable()

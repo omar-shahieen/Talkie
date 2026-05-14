@@ -7,7 +7,7 @@ import {
 } from 'typeorm';
 import { ChannelOverwrite } from './channel-overwrite.entity';
 import { ChannelMember } from './channel-member.entity';
-import { Server } from 'src/servers/entities/server.entity';
+import { Server } from '../../servers/entities/server.entity';
 
 export enum ChannelType {
   SERVER_TEXT = 'SERVER_TEXT',

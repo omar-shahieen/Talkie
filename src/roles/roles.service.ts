@@ -4,7 +4,7 @@ import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { Role } from './entities/role.entity';
 import { Repository } from 'typeorm';
-import { NotFoundException } from 'src/common/exceptions/domain.exception';
+import { NotFoundException } from '../common/exceptions/domain.exception';
 
 @Injectable()
 export class RolesService {

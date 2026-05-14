@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { LoggingService } from '../../logging/logging.service';
-import { User } from 'src/users/entities/user.entity';
-import { NotFoundException } from 'src/common/exceptions/domain.exception';
+import { User } from '../../users/entities/user.entity';
+import { NotFoundException } from '../../common/exceptions/domain.exception';
 
 @Injectable()
 export class AppPermissionsService {

@@ -2,10 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification, NotificationType } from './entities/notification.entity';
-import { AppEvents } from 'src/events/events.enum';
+import { AppEvents } from '../events/events.enum';
 import { OnEvent } from '@nestjs/event-emitter';
-import { EventBusService } from 'src/events/eventBus.service';
-import { LoggingService } from 'src/logging/logging.service';
+import { EventBusService } from '../events/eventBus.service';
+import { LoggingService } from '../logging/logging.service';
 import { type MessageSendDto } from './dtos/messageSend.dto';
 
 @Injectable()

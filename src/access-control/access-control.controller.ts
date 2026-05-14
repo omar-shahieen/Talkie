@@ -2,7 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { RequireServerPermissions } from './server-permissions/requireServerPermission.decorator';
 import { Permission } from './server-permissions/serverPermissions.constants';
 import { RequireAppRole } from './app-permissions/requireAppRole.decorator';
-import { AppRole } from 'src/users/entities/user.entity';
+import { AppRole } from '../users/entities/user.entity';
 @Controller('access-control')
 export class AccessControlController {
   constructor() {}

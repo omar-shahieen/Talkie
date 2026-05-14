@@ -10,7 +10,7 @@ import { Role } from '../roles/entities/role.entity';
 import { ServerPermissionsService } from './server-permissions/serverPermissions.service';
 import { AppPermissionsGuard } from './app-permissions/appPermissions.guard';
 import { AppPermissionsService } from './app-permissions/appPermissions.service';
-import { User } from 'src/users/entities/user.entity';
+import { User } from '../users/entities/user.entity';
 
 @Global()
 @Module({

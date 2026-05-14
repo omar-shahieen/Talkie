@@ -7,7 +7,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Server } from 'src/servers/entities/server.entity';
+import { Server } from '../../servers/entities/server.entity';
 import { User } from '../../users/entities/user.entity';
 
 @Entity('invitations')

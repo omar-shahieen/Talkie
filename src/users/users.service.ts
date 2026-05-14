@@ -5,10 +5,10 @@ import { Brackets, Repository } from 'typeorm';
 import { LoggingService } from '../logging/logging.service';
 import { ServerMember } from '../servers/entities/server-member.entity';
 import { UpdateUserDto } from './dtos/updateUser.dto';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { APIFeatures } from 'src/common/helpers/api-features.helper';
-import { PaginatedResult } from 'src/common/dto/paginated-result.dto';
-import { NotFoundException } from 'src/common/exceptions/domain.exception';
+import { PaginationDto } from '../common/dto/pagination.dto';
+import { APIFeatures } from '../common/helpers/api-features.helper';
+import { PaginatedResult } from '../common/dto/paginated-result.dto';
+import { NotFoundException } from '../common/exceptions/domain.exception';
 
 @Injectable()
 export class UsersService {

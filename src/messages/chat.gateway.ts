@@ -30,7 +30,7 @@ import type {
 } from './chat.types';
 import { PresenceService } from '../presence/presence.service';
 import { ChannelsService } from '../channels/channels.service';
-import { MetricsService } from 'src/common/metrics/metrics.service';
+import { MetricsService } from '../common/metrics/metrics.service';
 
 @Injectable()
 @WebSocketGateway({
@@ -150,7 +150,9 @@ export class ChatGateway
     }
     void client.join(this.serverRoom(payload.serverId));
     void client.join(this.channelRoom(payload.channelId));
-    this.logger.log(`User ${client.data.user.id} joined channel room: ${payload.channelId}`);
+    this.logger.log(
+      `User ${client.data.user.id} joined channel room: ${payload.channelId}`,
+    );
     return { event: 'channel:joined', ...payload };
   }
 
@@ -176,7 +178,9 @@ export class ChatGateway
       throw new WsException('user is Forbidden to join this channel');
     }
     void client.join(this.channelRoom(payload.channelId));
-    this.logger.log(`User ${client.data.user.id} joined DM room: ${payload.channelId}`);
+    this.logger.log(
+      `User ${client.data.user.id} joined DM room: ${payload.channelId}`,
+    );
     return { event: 'dm:joined', channelId: payload.channelId };
   }
 
