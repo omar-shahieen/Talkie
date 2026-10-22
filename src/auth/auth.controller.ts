@@ -61,6 +61,11 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('refresh')
   createRefreshToken(@Cookies('jwt_refresh') jwt_refresh: string) {
+    if (!jwt_refresh) {
+      throw new UnauthorizedException(
+        'Refresh token request rejected: missing jwt_refresh cookie',
+      );
+    }
     return this.authService.refreshToken(jwt_refresh);
   }
 

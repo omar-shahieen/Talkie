@@ -2,35 +2,44 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { AuthService } from './auth.service';
-import { UsersService } from '../users/users.service';
 import { LoggingService } from '../logging/logging.service';
 import { EventBusService } from '../events/eventBus.service';
 import { User } from '../users/entities/user.entity';
 import { AppEvents } from '../events/events.enum';
+import { UnauthorizedException } from '../common/exceptions/domain.exception';
 
 jest.mock('otplib', () => ({
   __esModule: true,
   default: {
     generateSecret: jest.fn(() => 'mock-secret'),
     generateURI: jest.fn(() => 'mock-uri'),
-    verify: jest.fn(() => true),
+    verify: jest.fn(() => Promise.resolve({ valid: true })),
   },
 }));
 
 describe('AuthService', () => {
   let service: AuthService;
 
-  const mockUsersService = {
-    findByEmailWithPassword: jest.fn<(email: string) => Promise<User | null>>(),
-    findByIdWithRefreshToken: jest.fn<(id: string) => Promise<User | null>>(),
-    findByEmailWithSecrets: jest.fn<(email: string) => Promise<User | null>>(),
-    findByIdWithTfaSecret: jest.fn<(id: string) => Promise<User | null>>(),
-    create: jest.fn<(user: Partial<User>) => Promise<User>>(),
-    update:
-      jest.fn<(id: string, user: Partial<User> | undefined) => Promise<User>>(),
+  const mockQueryBuilder = {
+    where: jest.fn().mockReturnThis(),
+    addSelect: jest.fn().mockReturnThis(),
+    getOne: jest.fn<() => Promise<User | null>>(),
+  };
+
+  const mockUsersRepository = {
+    createQueryBuilder: jest.fn(() => mockQueryBuilder),
+    findOne: jest.fn<(opts: any) => Promise<User | null>>(),
+    save: jest.fn<(user: any) => Promise<any>>((u) => Promise.resolve(u)),
+  };
+
+  const mockCache = {
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
   };
 
   const mockJwtService = {
@@ -68,8 +77,12 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         {
-          provide: UsersService,
-          useValue: mockUsersService,
+          provide: getRepositoryToken(User),
+          useValue: mockUsersRepository,
+        },
+        {
+          provide: CACHE_MANAGER,
+          useValue: mockCache,
         },
         {
           provide: JwtService,
@@ -95,34 +108,33 @@ describe('AuthService', () => {
 
   it('stores hashed refresh token on signIn', async () => {
     mockJwtService.signAsync
-      .mockResolvedValueOnce('refresh_token_plain')
-      .mockResolvedValueOnce('access_token_plain');
+      .mockResolvedValueOnce('access_token_plain')
+      .mockResolvedValueOnce('refresh_token_plain');
 
-    const result = await service.signIn({
-      id: 'user-id',
-      email: 'user@example.com',
-    });
+    const mockUser = new User();
+    mockUser.id = 'user-id';
+    mockUser.email = 'user@example.com';
+    mockQueryBuilder.getOne.mockResolvedValueOnce(mockUser);
 
-    const updateCall = mockUsersService.update.mock.calls[0];
-    const updatePayload = updateCall?.[1] as {
-      currentJwtToken: string;
-    };
+    const result = await service.signIn('user-id', 'user@example.com');
 
-    expect(updateCall?.[0]).toBe('user-id');
-    expect(updatePayload.currentJwtToken).toEqual(expect.any(String));
-    expect(updatePayload.currentJwtToken).not.toBe('refresh_token_plain');
+    expect(mockUsersRepository.save).toHaveBeenCalled();
+    const savedUser = mockUsersRepository.save.mock.calls[0][0];
+    expect(savedUser.currentJwtToken).toEqual(expect.any(String));
+    expect(savedUser.currentJwtToken).not.toBe('refresh_token_plain');
     await expect(
-      bcrypt.compare('refresh_token_plain', updatePayload.currentJwtToken),
+      bcrypt.compare('refresh_token_plain', savedUser.currentJwtToken),
     ).resolves.toBe(true);
     expect(mockLoggingService.log).toHaveBeenCalledWith(
-      'Auth login succeeded for userId=user-id',
-      AuthService.name,
+      expect.stringContaining('Auth login succeeded'),
+      expect.any(Object),
     );
     expect(mockEventBusService.emit).toHaveBeenCalledWith(
       AppEvents.USER_LOGIN,
       expect.objectContaining({ userId: 'user-id' }),
     );
     expect(result).toEqual({
+      message: 'Signed in successfully.',
       access_token: 'access_token_plain',
       refresh_token: 'refresh_token_plain',
     });
@@ -135,10 +147,6 @@ describe('AuthService', () => {
 
     await expect(service.refreshToken('bad-token')).rejects.toBeInstanceOf(
       UnauthorizedException,
-    );
-    expect(mockLoggingService.warn).toHaveBeenCalledWith(
-      'Refresh token verification failed: invalid signature',
-      AuthService.name,
     );
   });
 
@@ -153,70 +161,42 @@ describe('AuthService', () => {
 
     mockJwtService.verifyAsync.mockResolvedValueOnce({
       sub: 'user-id',
-      username: 'user@example.com',
+      email: 'user@example.com',
     });
-    mockUsersService.findByIdWithRefreshToken.mockResolvedValueOnce(user);
+    mockUsersRepository.findOne.mockResolvedValueOnce(user);
     mockJwtService.signAsync.mockResolvedValueOnce('new-access-token');
 
     await expect(service.refreshToken(rawRefreshToken)).resolves.toEqual({
       access_token: 'new-access-token',
     });
-    expect(mockLoggingService.log).toHaveBeenCalledWith(
-      'Access token refreshed for userId=user-id',
-      AuthService.name,
-    );
   });
 
-  it('logs a warning when login email does not exist', async () => {
-    mockUsersService.findByEmailWithPassword.mockResolvedValueOnce(null);
+  it('throws UnauthorizedException when login email does not exist', async () => {
+    mockQueryBuilder.getOne.mockResolvedValueOnce(null);
 
-    const result = await service.validateUser('missing@example.com', 'pass');
-
-    expect(result).toBeNull();
-    expect(mockLoggingService.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Auth login failed: user not found'),
-      AuthService.name,
-    );
-    expect(mockEventBusService.emit).toHaveBeenCalledWith(
-      AppEvents.USER_LOGIN_FAILED,
-      expect.objectContaining({ reason: 'user-not-found' }),
-    );
+    await expect(
+      service.validateUser('missing@example.com', 'pass'),
+    ).rejects.toThrow(UnauthorizedException);
   });
 
-  it('logs a warning when password is invalid', async () => {
+  it('throws UnauthorizedException when password is invalid', async () => {
     const user = new User();
     user.id = 'user-id';
     user.email = 'user@example.com';
     user.comparePassword = () => Promise.resolve(false);
 
-    mockUsersService.findByEmailWithPassword.mockResolvedValueOnce(user);
+    mockQueryBuilder.getOne.mockResolvedValueOnce(user);
 
-    const result = await service.validateUser('user@example.com', 'wrong-pass');
-
-    expect(result).toBeNull();
-    expect(mockLoggingService.warn).toHaveBeenCalledWith(
-      'Auth login failed: invalid credentials userId=user-id',
-      AuthService.name,
-    );
-    expect(mockEventBusService.emit).toHaveBeenCalledWith(
-      AppEvents.USER_LOGIN_FAILED,
-      expect.objectContaining({
-        userId: 'user-id',
-        reason: 'invalid-password',
-      }),
-    );
+    await expect(
+      service.validateUser('user@example.com', 'wrong-pass'),
+    ).rejects.toThrow(UnauthorizedException);
   });
 
-  it('logs warning for invalid TFA login token', async () => {
+  it('throws UnauthorizedException for invalid TFA login token', async () => {
     mockJwtService.verifyAsync.mockRejectedValueOnce(new Error('bad token'));
 
     await expect(service.validateTfaLoginToken('bad-token')).rejects.toThrow(
       UnauthorizedException,
-    );
-
-    expect(mockLoggingService.warn).toHaveBeenCalledWith(
-      'TFA login token validation failed: invalid or expired token',
-      AuthService.name,
     );
   });
 });

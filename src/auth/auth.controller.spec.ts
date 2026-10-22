@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException } from '../common/exceptions/domain.exception';
 import type { Response } from 'express';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -93,9 +93,5 @@ describe('AuthController', () => {
     expect(() =>
       controller.createRefreshToken(undefined as unknown as string),
     ).toThrow(UnauthorizedException);
-    expect(mockLoggingService.warn).toHaveBeenCalledWith(
-      'Refresh token request rejected: missing jwt_refresh cookie',
-      AuthController.name,
-    );
   });
 });
