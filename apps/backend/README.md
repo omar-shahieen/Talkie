@@ -14,19 +14,7 @@ It supports:
 - Mail queue with worker processing
 - Scheduled cleanup jobs (cron)
 
-## 1. Tech Stack
-
-- NestJS 11
-- TypeScript
-- PostgreSQL + TypeORM (primary data store)
-- MongoDB + Mongoose (audit data)
-- Redis (presence and queue runtime)
-- BullMQ (background jobs)
-- Socket.IO (WebSocket)
-- Elasticsearch (optional, for search)
-- Multer + Sharp (upload and image processing)
-
-## 2. High-Level Architecture
+## 1. High-Level Architecture
 
 - HTTP Layer: Nest controllers and services
 - Realtime Layer: Socket.IO gateways with dedicated namespaces
@@ -36,7 +24,7 @@ It supports:
   - MongoDB for audit logs
   - Redis for presence/cache/queue runtime data
 
-## 3. Core Modules
+## 2. Core Modules
 
 - AuthModule
   - Local auth, JWT, refresh flow, Google OAuth, 2FA
@@ -59,9 +47,9 @@ It supports:
 - LoggingModule
   - Structured logging and HTTP request logging
 
-## 4. Runtime Features
+## 3. Runtime Features
 
-### 4.1 Authentication and Security
+### 3.1 Authentication and Security
 
 - JWT guard is globally enabled by default
 - Public endpoints are explicitly marked via decorator
@@ -73,7 +61,7 @@ It supports:
   - disable
   - verify
 
-### 4.2 Messaging and Attachments
+### 3.2 Messaging and Attachments
 
 - Create/update/delete messages
 - Add/remove reactions
@@ -87,7 +75,7 @@ It supports:
   - Compresses images to WebP
   - Validates channel membership before accepting upload
 
-### 4.3 Message Deletion and Retention
+### 3.3 Message Deletion and Retention
 
 - User-initiated message deletion is hard delete
 - Automated retention job:
@@ -95,7 +83,7 @@ It supports:
   - Hard-deletes messages older than 7 days
   - Recomputes `lastMessageId` for impacted channels
 
-### 4.4 Realtime (Socket.IO)
+### 3.4 Realtime (Socket.IO)
 
 - `chat` namespace events:
   - `server:join` / `server:leave`
@@ -109,127 +97,44 @@ It supports:
   - `notification:recieved`
   - `notification:cleared`
 
-## 5. REST API Summary
+## 4. REST API Documentation (Swagger / OpenAPI)
 
-### 5.1 Auth
+Interactive REST API documentation and OpenAPI schemas are provided via Swagger.
 
-- POST `/auth/signup`
-- POST `/auth/login`
-- POST `/auth/refresh`
-- POST `/auth/logout`
-- GET `/auth/profile`
-- GET `/auth/google`
-- GET `/auth/google/callback`
-- POST `/auth/tfa/initiate`
-- POST `/auth/tfa/enable`
-- POST `/auth/tfa/disable`
-- POST `/auth/tfa/verify`
+### 4.1 How to Access Swagger Docs
 
-### 5.2 Servers
+1. **Start the backend development server**:
+   ```bash
+   # From apps/backend directory:
+   npm run start:dev
 
-- POST `/servers`
-- GET `/servers`
-- GET `/servers/mine/:userId`
-- GET `/servers/discovery/public`
-- POST `/servers/join`
-- DELETE `/servers/:id/leave/:userId`
-- GET `/servers/:id`
-- PATCH `/servers/:id`
-- DELETE `/servers/:id?requesterId=...`
+   # Or from the repository root:
+   npm run dev:backend
+   ```
+2. **Access the endpoints in your browser**:
+   - **Swagger UI (Interactive)**: [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
+   - **OpenAPI JSON Spec**: [http://localhost:3000/api/docs-json](http://localhost:3000/api/docs-json)
 
-### 5.3 Channels
+*(If you have configured a custom `PORT` in your `.env`, replace `3000` with your configured port).*
 
-- POST `/channels`
-- GET `/channels`
-- GET `/channels/server/:serverId/visible/:userId`
-- GET `/channels/:id`
-- PATCH `/channels/:id`
-- DELETE `/channels/:id`
-- POST `/channels/:channelId/ack`
+### 4.2 What the Swagger Docs Provide
 
-### 5.4 Messages
+- **Interactive API Explorer**: Execute live HTTP requests directly against your running local instance.
+- **DTO Schemas & Validation**: Inspect payload formats, required attributes, types, and constraints for all requests.
+- **Authentication Support**: Use the **Authorize** button with your JWT token (`Bearer <access_token>`) to test authenticated endpoints.
+- **Comprehensive Domain Coverage**: Full documentation for Auth, Users, Friends, Servers, Channels, Messages, Roles, Invitations, Notifications, and Access Control.
 
-- POST `/messages/upload`
-- POST `/messages`
-- PATCH `/messages/:id`
-- DELETE `/messages/:id`
-- GET `/messages/channel/:channelId`
-- GET `/messages/:id/replies`
-- GET `/messages/:id/thread`
-- POST `/messages/:id/reactions`
-- DELETE `/messages/:id/reactions`
-- GET `/messages/search/query`
+---
 
-### 5.5 Roles
+## 5. Environment Configuration & Backing Services
 
-- POST `/roles`
-- GET `/roles`
-- GET `/roles/:id`
-- PATCH `/roles/:id`
-- DELETE `/roles/:id`
+The backend uses a pre-configured [.env.example](.env.example) template located in the backend root directory. Before starting the server, create your local configuration:
 
-### 5.6 Notifications
+```bash
+cp .env.example .env
+```
 
-- GET `/notifications`
-- PATCH `/notifications/:id/read`
-
-### 5.7 Access Control
-
-- GET `/access-control/resolve`
-
-## 6. Environment Variables
-
-### 6.1 Core
-
-- `NODE_ENV`
-- `PORT`
-- `APP_NAME`
-
-### 6.2 PostgreSQL
-
-- `DB_HOST`
-- `DB_PORT`
-- `DB_USERNAME`
-- `DB_PASSWORD`
-- `DB_NAME`
-- `DB_SYNC`
-
-### 6.3 MongoDB
-
-- `MONGO_URI`
-
-### 6.4 Redis / Queue
-
-- `REDIS_HOST`
-- `REDIS_PORT`
-- `REDIS_USERNAME`
-- `REDIS_PASSWORD`
-
-### 6.5 Auth
-
-- `JWT_SECRET`
-- `FRONTEND_OAUTH_REDIRECT_URL`
-- `GOOGLE_CLIENT_ID`
-- `GOOGLE_CLIENT_SECRET`
-- `GOOGLE_CALLBACK_URL`
-
-### 6.6 Mail
-
-- `MAIL_FROM`
-- `DEV_MAIL_HOST`
-- `DEV_MAIL_PORT`
-- `DEV_MAIL_USER`
-- `DEV_MAIL_PASS`
-- `PROD_MAIL_HOST`
-- `PROD_MAIL_PORT`
-- `PROD_MAIL_USER`
-- `PROD_MAIL_PASS`
-
-### 6.7 Search
-
-- `ELASTICSEARCH_NODE` (optional)
-
-## 7. Local Setup
+## 6. Local Setup
 
 Install dependencies:
 
@@ -237,10 +142,9 @@ Install dependencies:
 npm install
 ```
 
-Run required infrastructure locally:
+Run required backing infrastructure locally:
 
 - PostgreSQL
-- MongoDB
 - Redis
 
 Start the application:
@@ -254,7 +158,7 @@ npm run build
 npm run start:prod
 ```
 
-## 8. Useful Scripts
+## 7. Useful Scripts
 
 ```bash
 npm run build
@@ -264,12 +168,12 @@ npm run test:e2e
 npm run seed
 ```
 
-## 9. Uploads and Static Files
+## 8. Uploads and Static Files
 
 - Uploaded files are stored under `uploads/messages`
 - Static serving is exposed under `/uploads/*`
 
-## 10. Contributor Notes
+## 9. Contributor Notes
 
 - A large part of the system is event-driven (messages, notifications, realtime updates)
 - Follow the existing module pattern: Controller -> Service -> Repository
@@ -280,6 +184,6 @@ npm run seed
   - search sync
   - retention job behavior
 
-## 11. License
+## 10. License
 
 UNLICENSED
