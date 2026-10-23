@@ -1,7 +1,7 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { LoggingService } from './logging/logging.service';
-import morgan from 'morgan';
+
 import cookieParser from 'cookie-parser';
 import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import express from 'express';
@@ -23,13 +23,6 @@ async function bootstrap() {
   // replace winston logger with NestJS LoggerService
   const logger = app.get(LoggingService);
   app.useLogger(logger);
-
-  // Morgan for request logging
-  app.use(
-    morgan(':method :url :status :res[content-length] - :response-time ms', {
-      stream: logger.httpStream(),
-    }),
-  );
 
   // cookie parser
   app.use(cookieParser());

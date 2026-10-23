@@ -11,16 +11,16 @@ services:
     ports:
       - '3100:3100'
 
-  alloy: # replaces promtail
+  alloy:
     image: grafana/alloy:latest
     volumes:
-      - /var/log/app:/var/log/app # same mount as before
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./monitoring/alloy/config.alloy:/etc/alloy/config.alloy
     command:
       - run
       - /etc/alloy/config.alloy
     ports:
-      - '12345:12345' # Alloy UI
+      - '12345:12345'
 
   grafana:
     image: grafana/grafana:latest

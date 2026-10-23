@@ -156,8 +156,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     // Check if it's a TypeORM database error
     if (exception instanceof QueryFailedError) {
       const driverError = exception.driverError as
-        | PostgresDriverError
-        | undefined;
+        PostgresDriverError | undefined;
       const code = driverError?.code;
 
       // 2. Handle specific Postgres error codes

@@ -2,9 +2,7 @@ import { Injectable, LoggerService as NestLoggerService } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 import { MyClsStore } from '../common/interface/cls-store.interface';
 import winston from 'winston';
-import 'winston-daily-rotate-file';
 
-type LogLevel = 'error' | 'warn' | 'info' | 'http' | 'debug';
 type MetaArg = Record<string, any> | string | undefined;
 
 @Injectable()
@@ -33,16 +31,8 @@ export class LoggingService implements NestLoggerService {
         winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
         winston.format.errors({ stack: true }),
         winston.format.splat(),
-        winston.format.json(),
       ),
-      transports: [
-        this.buildConsoleTransport(),
-        this.buildFileTransport('error', 'error'),
-        this.buildFileTransport('app', 'info'),
-        ...(isDevelopment ? [this.buildFileTransport('debug', 'debug')] : []),
-      ],
-      exceptionHandlers: [this.buildFileTransport('exceptions', 'error')],
-      rejectionHandlers: [this.buildFileTransport('rejections', 'error')],
+      transports: [this.buildConsoleTransport(isDevelopment)],
       exitOnError: false,
     });
   }
@@ -113,13 +103,6 @@ export class LoggingService implements NestLoggerService {
     });
   }
 
-  httpStream() {
-    return {
-      write: (message: string) =>
-        this.logger.http(message.trim(), { service: this.serviceName }),
-    };
-  }
-
   private formatLogValue(value: unknown): string {
     if (value === null || value === undefined) return '';
     if (typeof value === 'string') return value;
@@ -134,36 +117,31 @@ export class LoggingService implements NestLoggerService {
     }
   }
 
-  private buildConsoleTransport() {
+  private buildConsoleTransport(isDevelopment: boolean) {
+    if (isDevelopment) {
+      return new winston.transports.Console({
+        handleExceptions: true,
+        handleRejections: true,
+        format: winston.format.combine(
+          winston.format.colorize({ all: true }),
+          winston.format.printf((info) => {
+            const contextLabel = info.context
+              ? `${this.formatLogValue(info.service ?? this.serviceName)}:${this.formatLogValue(info.context)}`
+              : this.formatLogValue(info.service ?? this.serviceName);
+            const timestamp = this.formatLogValue(info.timestamp);
+            const level = this.formatLogValue(info.level).toUpperCase();
+            const message = this.formatLogValue(info.stack ?? info.message);
+
+            return `[${timestamp}] | ${contextLabel} | ${level}: ${message}`;
+          }),
+        ),
+      });
+    }
+
     return new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize({ all: true }),
-        winston.format.printf((info) => {
-          const contextLabel = info.context
-            ? `${this.formatLogValue(info.service ?? this.serviceName)}:${this.formatLogValue(info.context)}`
-            : this.formatLogValue(info.service ?? this.serviceName);
-          const timestamp = this.formatLogValue(info.timestamp);
-          const level = this.formatLogValue(info.level).toUpperCase();
-          const message = this.formatLogValue(info.stack ?? info.message);
-
-          return `[${timestamp}] | ${contextLabel} | ${level}: ${message}`;
-        }),
-      ),
-    });
-  }
-
-  private buildFileTransport(filename: string, level: LogLevel) {
-    return new winston.transports.DailyRotateFile({
-      filename: `/var/log/app/${filename}-%DATE%.log`,
-      level,
-      datePattern: 'YYYY-MM-DD',
-      zippedArchive: true,
-      maxSize: '20m',
-      maxFiles: '14d',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json(),
-      ),
+      handleExceptions: true,
+      handleRejections: true,
+      format: winston.format.combine(winston.format.json()),
     });
   }
 }

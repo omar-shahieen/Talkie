@@ -1,17 +1,23 @@
-// Read log files
-local.file_match "nestjs_logs" {
-  path_targets = [{
-    __path__ = "/var/log/app/*.log",
-    app       = "talkie-backend",
-  }]
+// Discover docker containers
+discovery.docker "talkie" {
+  host = "unix:///var/run/docker.sock"
 }
 
-loki.source.file "nestjs" {
-  targets    = local.file_match.nestjs_logs.targets
+// Stream stdout/stderr from backend container
+loki.source.docker "backend" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.docker.talkie.targets
   forward_to = [loki.process.parse_json.receiver]
+  relabel_rules = [
+    rule {
+      source_labels = ["__meta_docker_container_name"]
+      regex         = "/?(talkie-backend.*)"
+      action        = "keep"
+    },
+  ]
 }
 
-// Pipeline: parse JSON and extract labels
+// Pipeline: parse the structured JSON from stdout
 loki.process "parse_json" {
   forward_to = [loki.write.default.receiver]
 
@@ -32,7 +38,6 @@ loki.process "parse_json" {
   }
 }
 
-// Ship to Loki
 loki.write "default" {
   endpoint {
     url = "http://loki:3100/loki/api/v1/push"

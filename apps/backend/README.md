@@ -21,7 +21,6 @@ It supports:
 - Internal Event Bus: event-emitter driven domain events
 - Persistence:
   - PostgreSQL for core entities
-  - MongoDB for audit logs
   - Redis for presence/cache/queue runtime data
 
 ## 2. Core Modules
@@ -43,9 +42,9 @@ It supports:
 - MailModule
   - Queued email sending with worker and queue events
 - AuditModule
-  - Audit stream and persistence in MongoDB
+  - Audit stream and persistence
 - LoggingModule
-  - Structured logging and HTTP request logging
+  - Structured logging to stdout/stderr with CLS correlation tracing
 
 ## 3. Runtime Features
 
@@ -134,9 +133,9 @@ The backend uses a pre-configured [.env.example](.env.example) template located 
 cp .env.example .env
 ```
 
-## 6. Local Setup
+## 6. Local Setup (Without Docker)
 
-Install dependencies:
+Install dependencies from the monorepo root:
 
 ```bash
 npm install
@@ -158,7 +157,165 @@ npm run build
 npm run start:prod
 ```
 
-## 7. Useful Scripts
+---
+
+## 7. Running with Docker (Local Dev & Production)
+
+> [!IMPORTANT]
+> **Build Context**: Always run `docker build` from the **monorepo root** directory (`talkie/`), because the build context needs the root `package.json` and `package-lock.json` to validate workspace dependencies.
+
+### 7.1 Database & Redis Connection Inside Docker
+
+Inside any container, `localhost` refers to the container itself. To connect to PostgreSQL and Redis:
+
+* **When DB & Redis run on your host computer or forwarded ports (e.g. Docker Desktop)**:
+  Use `host.docker.internal` as the host:
+  ```env
+  DB_HOST=host.docker.internal
+  REDIS_HOST=host.docker.internal
+  ```
+* **When containers share a user-defined Docker network** (e.g. `talkie-net`):
+  Use the container names directly:
+  ```env
+  DB_HOST=talkie-postgres
+  REDIS_HOST=talkie-redis
+  ```
+
+---
+
+### 7.2 Local Development with Docker
+
+Run a hot-reloading development container with local source code mounted into the container:
+
+#### Step 1: Build the Development Stage Image
+Run from the monorepo root:
+```bash
+docker build --target development -f apps/backend/Dockerfile -t talkie-backend:dev .
+```
+
+#### Step 2: Run the Development Container
+
+**PowerShell (Windows):**
+```powershell
+docker run -it --rm `
+  --name talkie-backend-dev `
+  -p 3000:3000 `
+  --env-file apps/backend/.env `
+  -e NODE_ENV=development `
+  -e DB_HOST=host.docker.internal `
+  -e REDIS_HOST=host.docker.internal `
+  -v ${PWD}/apps/backend/src:/usr/src/app/apps/backend/src `
+  -v talkie_uploads:/usr/src/app/uploads `
+  talkie-backend:dev npm run start:dev
+```
+
+**Bash / Linux / macOS:**
+```bash
+docker run -it --rm \
+  --name talkie-backend-dev \
+  -p 3000:3000 \
+  --env-file apps/backend/.env \
+  -e NODE_ENV=development \
+  -e DB_HOST=host.docker.internal \
+  -e REDIS_HOST=host.docker.internal \
+  -v $(pwd)/apps/backend/src:/usr/src/app/apps/backend/src \
+  -v talkie_uploads:/usr/src/app/uploads \
+  talkie-backend:dev npm run start:dev
+```
+
+---
+
+### 7.3 Production Container Deployment
+
+The production image is multi-stage, compiles TypeScript to `dist/`, prunes development dependencies, and runs under the unprivileged `node` user with single-line structured JSON logs streaming to `stdout`.
+
+#### Step 1: Build the Production Image
+Run from the monorepo root:
+```bash
+docker build -f apps/backend/Dockerfile -t talkie-backend:latest .
+```
+
+#### Step 2: Run the Production Container
+
+**Option A: Connecting to host-bound services (`host.docker.internal`)**
+
+**PowerShell (Windows):**
+```powershell
+docker rm -f talkie-backend 2>$null
+
+docker run -d `
+  --name talkie-backend `
+  -p 3000:3000 `
+  --env-file apps/backend/.env `
+  -e NODE_ENV=production `
+  -e DB_HOST=host.docker.internal `
+  -e REDIS_HOST=host.docker.internal `
+  -v talkie_uploads:/usr/src/app/uploads `
+  --log-opt max-size=20m `
+  --log-opt max-file=3 `
+  --restart unless-stopped `
+  talkie-backend:latest
+```
+
+**Bash / Linux / macOS:**
+```bash
+docker rm -f talkie-backend 2>/dev/null
+
+docker run -d \
+  --name talkie-backend \
+  -p 3000:3000 \
+  --env-file apps/backend/.env \
+  -e NODE_ENV=production \
+  -e DB_HOST=host.docker.internal \
+  -e REDIS_HOST=host.docker.internal \
+  -v talkie_uploads:/usr/src/app/uploads \
+  --log-opt max-size=20m \
+  --log-opt max-file=3 \
+  --restart unless-stopped \
+  talkie-backend:latest
+```
+
+**Option B: On a Shared Docker Network (`talkie-net`)**
+```bash
+# 1. Create network (if not already existing)
+docker network create talkie-net
+
+# 2. Connect your database and redis containers
+docker network connect talkie-net talkie-postgres
+docker network connect talkie-net talkie-redis
+
+# 3. Start backend using internal container DNS names
+docker run -d \
+  --name talkie-backend \
+  --network talkie-net \
+  -p 3000:3000 \
+  --env-file apps/backend/.env \
+  -e NODE_ENV=production \
+  -e DB_HOST=talkie-postgres \
+  -e REDIS_HOST=talkie-redis \
+  -v talkie_uploads:/usr/src/app/uploads \
+  --log-opt max-size=20m \
+  --log-opt max-file=3 \
+  --restart unless-stopped \
+  talkie-backend:latest
+```
+
+#### Step 3: Useful Docker Operations
+```bash
+# View live logs
+docker logs -f talkie-backend
+
+# Check container resource usage
+docker stats talkie-backend
+
+# Stop and restart container
+docker stop talkie-backend
+docker start talkie-backend
+```
+
+---
+
+## 8. Useful Scripts
 
 ```bash
 npm run build
@@ -168,12 +325,13 @@ npm run test:e2e
 npm run seed
 ```
 
-## 8. Uploads and Static Files
+## 9. Uploads and Static Files
 
 - Uploaded files are stored under `uploads/messages`
+- In Docker, persistent storage is maintained via the `talkie_uploads` named volume mounted to `/usr/src/app/uploads`
 - Static serving is exposed under `/uploads/*`
 
-## 9. Contributor Notes
+## 10. Contributor Notes
 
 - A large part of the system is event-driven (messages, notifications, realtime updates)
 - Follow the existing module pattern: Controller -> Service -> Repository
@@ -184,6 +342,6 @@ npm run seed
   - search sync
   - retention job behavior
 
-## 10. License
+## 11. License
 
 UNLICENSED

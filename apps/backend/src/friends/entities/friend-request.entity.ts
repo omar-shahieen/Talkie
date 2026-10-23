@@ -11,10 +11,7 @@ import {
 import { User } from '../../users/entities/user.entity';
 
 export type FriendRequestStatus =
-  | 'pending'
-  | 'accepted'
-  | 'rejected'
-  | 'cancelled';
+  'pending' | 'accepted' | 'rejected' | 'cancelled';
 
 @Entity('friend_requests')
 @Index(['senderId', 'receiverId'], { unique: true })
