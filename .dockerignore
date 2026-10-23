@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/logs
+**/uploads
+**/.env
+.git
+.nx
+.idea
+.vscode
+npm-debug.log
