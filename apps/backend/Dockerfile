@@ -39,6 +39,7 @@ RUN npm prune --omit=dev --workspace=@talkie/backend && npm cache clean --force
 
 USER node
 
+
 # Production stage
 FROM node:24-alpine AS production
 
@@ -53,4 +54,19 @@ COPY --from=build --chown=node:node /usr/src/app/apps/backend/dist ./dist
 EXPOSE 3000
 USER node
 
+ARG GIT_COMMIT=unknown
+ARG BUILD_DATE=unknown
+ARG NODE_ENV=production
+
+# 2. Add OCI Standard Labels (inspectable via 'docker inspect')
+LABEL org.opencontainers.image.revision="${GIT_COMMIT}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.environment="${NODE_ENV}"
+
+# 3. Make them accessible at runtime inside NestJS via process.env
+ENV GIT_COMMIT=${GIT_COMMIT} \
+    NODE_ENV=${NODE_ENV}
 CMD ["node", "dist/main.js"]
+
+
+

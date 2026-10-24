@@ -4,6 +4,7 @@ import {
   Catch,
   ArgumentsHost,
   HttpStatus,
+  HttpException,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AppException } from '../exceptions/app.exception';
@@ -150,6 +151,30 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         message: exception.message,
         context: exception.context,
         isOperational: exception.isOperational,
+      };
+    }
+
+    if (exception instanceof HttpException) {
+      const statusCode = exception.getStatus();
+      const res = exception.getResponse();
+      const message =
+        typeof res === 'object' && res !== null && 'message' in res
+          ? (res as { message: unknown }).message
+          : exception.message;
+
+      const errorCode =
+        typeof res === 'object' && res !== null && 'error' in res
+          ? String((res as { error: unknown }).error)
+              .toUpperCase()
+              .replace(/\s+/g, '_')
+          : exception.name.replace(/Exception$/, '').toUpperCase();
+
+      return {
+        statusCode,
+        errorCode: errorCode || 'HTTP_ERROR',
+        message: Array.isArray(message) ? message.join(', ') : String(message),
+        stack: exception.stack,
+        isOperational: statusCode < 500,
       };
     }
 

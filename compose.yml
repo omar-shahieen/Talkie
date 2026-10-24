@@ -1,0 +1,243 @@
+# ==============================================================================
+# Talkie - Production Docker Compose Specification
+#
+# Usage (run from monorepo root):
+#   docker compose --env-file apps/backend/.env up -d --build
+# ==============================================================================
+name: talkie
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-common: &service-defaults
+  restart: unless-stopped
+  logging: *default-logging
+
+services:
+  postgres:
+    <<: *service-defaults
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:?DB_USERNAME is required}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      POSTGRES_DB: ${DB_NAME:?DB_NAME is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    <<: *service-defaults
+    image: redis:7-alpine
+    command:
+      - redis-server
+      - --requirepass
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      - --appendonly
+      - "yes"
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    volumes:
+      - redis_data:/data
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  backend:
+    <<: *service-defaults
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+      target: production
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-local-dev}
+        NODE_ENV: ${NODE_ENV:-production}
+      # cache_from:
+      #   - ${BACKEND_IMAGE_CACHE:-talkie-backend:cache}
+    env_file:
+      - ./apps/backend/.env
+    environment:
+      # Container networking overrides (replaces localhost from .env)
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      PORT: 3000
+      FRONTEND_END_URL: http://localhost:3002/
+      FRONTEND_OAUTH_REDIRECT_URL: http://localhost:3002/oauth
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - talkie_uploads:/usr/src/app/uploads
+    networks:
+      - edge
+      - data
+      - monitoring
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  frontend:
+    <<: *service-defaults
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+      target: production
+      args:
+        # Client-side bundle reaches backend via host port
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+        GIT_COMMIT: ${GIT_COMMIT:-local-dev}
+        NODE_ENV: ${NODE_ENV:-production}
+      # cache_from:
+      #   - ${FRONTEND_IMAGE_CACHE:-talkie-frontend:cache}
+    ports:
+      - "127.0.0.1:3002:8080"
+    networks:
+      - edge
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  prometheus:
+    <<: *service-defaults
+    image: prom/prometheus:v3.5.0
+    volumes:
+      - ./apps/backend/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - monitoring
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:9090/-/ready > /dev/null || exit 1",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  loki:
+    <<: *service-defaults
+    image: grafana/loki:3.5.0
+    volumes:
+      - loki_data:/loki
+    networks:
+      - monitoring
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:3100/ready > /dev/null || exit 1",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  alloy:
+    <<: *service-defaults
+    image: grafana/alloy:v1.10.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./apps/backend/monitoring/alloy/config.alloy:/etc/alloy/config.alloy:ro
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - /etc/alloy/config.alloy
+    networks:
+      - monitoring
+    depends_on:
+      loki:
+        condition: service_healthy
+
+  grafana:
+    <<: *service-defaults
+    image: grafana/grafana:12.1.0
+    ports:
+      - "127.0.0.1:3003:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - ./apps/backend/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./apps/backend/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - monitoring
+      - edge
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:3000/api/health > /dev/null || exit 1",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  talkie_uploads:
+  postgres_data:
+  redis_data:
+  grafana_data:
+  prometheus_data:
+  loki_data:
+
+networks:
+  # Internal network for database & cache (no host gateway, no external routing)
+  data:
+    driver: bridge
+    internal: true
+
+  # External-facing network for host ports and ingress
+  edge:
+    driver: bridge
+    internal: false
+
+  # Internal network for metrics scraping and log ingestion
+  monitoring:
+    driver: bridge
+    internal: true

@@ -3,18 +3,29 @@ discovery.docker "talkie" {
   host = "unix:///var/run/docker.sock"
 }
 
+// Filter backend container and map container name label
+discovery.relabel "backend" {
+  targets = discovery.docker.talkie.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/?(talkie-backend.*)"
+    action        = "keep"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/?(.*)"
+    target_label  = "container"
+  }
+}
+
 // Stream stdout/stderr from backend container
 loki.source.docker "backend" {
-  host       = "unix:///var/run/docker.sock"
-  targets    = discovery.docker.talkie.targets
-  forward_to = [loki.process.parse_json.receiver]
-  relabel_rules = [
-    rule {
-      source_labels = ["__meta_docker_container_name"]
-      regex         = "/?(talkie-backend.*)"
-      action        = "keep"
-    },
-  ]
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.relabel.backend.output
+  relabel_rules = discovery.relabel.backend.rules
+  forward_to    = [loki.process.parse_json.receiver]
 }
 
 // Pipeline: parse the structured JSON from stdout
