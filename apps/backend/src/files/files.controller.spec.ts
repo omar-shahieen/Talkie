@@ -5,10 +5,19 @@ import { FilesService } from './files.service';
 describe('FilesController', () => {
   let controller: FilesController;
 
+  const mockFilesService = {
+    handleUpload: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [FilesController],
-      providers: [FilesService],
+      providers: [
+        {
+          provide: FilesService,
+          useValue: mockFilesService,
+        },
+      ],
     }).compile();
 
     controller = module.get<FilesController>(FilesController);

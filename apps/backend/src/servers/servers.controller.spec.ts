@@ -5,10 +5,25 @@ import { ServersService } from './servers.service';
 describe('ServersController', () => {
   let controller: ServersController;
 
+  const mockServersService = {
+    create: jest.fn(),
+    findAll: jest.fn(),
+    findForUser: jest.fn(),
+    discover: jest.fn(),
+    findOne: jest.fn(),
+    update: jest.fn(),
+    remove: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ServersController],
-      providers: [ServersService],
+      providers: [
+        {
+          provide: ServersService,
+          useValue: mockServersService,
+        },
+      ],
     }).compile();
 
     controller = module.get<ServersController>(ServersController);

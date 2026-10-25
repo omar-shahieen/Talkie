@@ -5,10 +5,23 @@ import { RolesService } from './roles.service';
 describe('RolesController', () => {
   let controller: RolesController;
 
+  const mockRolesService = {
+    create: jest.fn(),
+    findAll: jest.fn(),
+    findOne: jest.fn(),
+    update: jest.fn(),
+    remove: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [RolesController],
-      providers: [RolesService],
+      providers: [
+        {
+          provide: RolesService,
+          useValue: mockRolesService,
+        },
+      ],
     }).compile();
 
     controller = module.get<RolesController>(RolesController);

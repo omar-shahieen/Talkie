@@ -1,22 +1,33 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { NotFoundException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { User } from './entities/user.entity';
+import { ServerMember } from '../servers/entities/server-member.entity';
 import { LoggingService } from '../logging/logging.service';
+import { NotFoundException } from '../common/exceptions/domain.exception';
 
 describe('UsersService', () => {
   let service: UsersService;
+
+  const mockQueryBuilder = {
+    addSelect: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    getOne: jest.fn(),
+  };
 
   const mockUsersRepository = {
     find: jest.fn(),
     create: jest.fn(),
     save: jest.fn(),
-    preload: jest.fn(),
     findOneBy: jest.fn(),
-    createQueryBuilder: jest.fn(),
-    findOneByOrFail: jest.fn(),
+    createQueryBuilder: jest.fn(() => mockQueryBuilder),
+    update: jest.fn(),
     delete: jest.fn(),
+    softRemove: jest.fn(),
+  };
+
+  const mockServerMemberRepository = {
+    find: jest.fn(),
   };
 
   const mockLoggingService = {
@@ -36,6 +47,10 @@ describe('UsersService', () => {
         {
           provide: getRepositoryToken(User),
           useValue: mockUsersRepository,
+        },
+        {
+          provide: getRepositoryToken(ServerMember),
+          useValue: mockServerMemberRepository,
         },
         {
           provide: LoggingService,
@@ -62,40 +77,36 @@ describe('UsersService', () => {
 
     expect(mockLoggingService.log).toHaveBeenCalledWith(
       'User created userId=user-1 email=ne***@example.com',
-      UsersService.name,
+      {
+        context: UsersService.name,
+        action: 'create',
+        userId: 'user-1',
+        email: 'ne***@example.com',
+      },
     );
   });
 
-  it('logs warning and throws when updating a missing user', async () => {
-    mockUsersRepository.preload.mockResolvedValueOnce(undefined);
+  it('throws NotFoundException when updating profile of a missing user', async () => {
+    mockQueryBuilder.getOne.mockResolvedValueOnce(null);
 
     await expect(
-      service.update('missing-id', { firstName: 'Nope' }),
+      service.updateProfile('missing-id', { firstName: 'Nope' }),
     ).rejects.toThrow(NotFoundException);
-
-    expect(mockLoggingService.warn).toHaveBeenCalledWith(
-      'User update rejected: userId=missing-id not found fields=firstName',
-      UsersService.name,
-    );
   });
 
-  it('logs successful updates with redacted field labels', async () => {
-    const updatedUser = { id: 'user-2', email: 'user2@example.com' } as User;
+  it('successfully updates user profile', async () => {
+    const existingUser = { id: 'user-2', firstName: 'Old' } as User;
+    mockQueryBuilder.getOne.mockResolvedValueOnce(existingUser);
+    mockUsersRepository.update.mockResolvedValueOnce({ affected: 1 });
 
-    mockUsersRepository.preload.mockResolvedValueOnce(updatedUser);
-    mockUsersRepository.save.mockResolvedValueOnce(updatedUser);
+    const result = await service.updateProfile('user-2', {
+      firstName: 'Renamed',
+    });
 
-    await expect(
-      service.update('user-2', {
-        firstName: 'Renamed',
-        password: 'new-secret',
-      }),
-    ).resolves.toEqual(updatedUser);
-
-    expect(mockLoggingService.log).toHaveBeenCalledWith(
-      'User updated userId=user-2 fields=firstName,password(redacted)',
-      UsersService.name,
-    );
+    expect(result).toEqual(existingUser);
+    expect(mockUsersRepository.update).toHaveBeenCalledWith('user-2', {
+      firstName: 'Renamed',
+    });
   });
 
   it('logs warning when remove is requested for a missing user', async () => {
@@ -104,8 +115,12 @@ describe('UsersService', () => {
     await expect(service.remove(88)).resolves.toBeUndefined();
 
     expect(mockLoggingService.warn).toHaveBeenCalledWith(
-      'User remove requested for missing userId=88',
-      UsersService.name,
+      'User remove requested for missing user',
+      {
+        context: UsersService.name,
+        action: 'remove',
+        userId: 88,
+      },
     );
   });
 
@@ -116,7 +131,11 @@ describe('UsersService', () => {
 
     expect(mockLoggingService.log).toHaveBeenCalledWith(
       'User removed userId=99',
-      UsersService.name,
+      {
+        context: UsersService.name,
+        action: 'remove',
+        userId: 99,
+      },
     );
   });
 });
