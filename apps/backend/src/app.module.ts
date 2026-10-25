@@ -56,7 +56,7 @@ import { MetricsModule } from './common/metrics/metrics.module';
         port: Number(config.get<string>('DB_PORT') ?? 5432),
         username: config.get<string>('DB_USERNAME') ?? 'postgres',
         password: config.get<string>('DB_PASSWORD') ?? 'postgres',
-        database: config.get<string>('DB_NAME') ?? 'DISCORD',
+        database: config.get<string>('DB_NAME') ?? 'talkie',
         autoLoadEntities: true,
         entities: [__dirname + '/**/entity/*{.js,.ts}'],
         subscribers: [__dirname + '/**/*.subscriber{.ts,.js}'],

@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { existsSync, mkdirSync } from 'fs';
-import { writeFile } from 'fs/promises';
-import { basename, extname, join } from 'path';
+import { randomUUID } from 'crypto';
+import { basename, extname } from 'path';
 import sharp from 'sharp';
 import { Repository } from 'typeorm';
 import { Channel, ChannelType } from '../channels/entities/channel.entity';
 import { ChannelMember } from '../channels/entities/channel-member.entity';
 import { ServerMember } from '../servers/entities/server-member.entity';
 import { LoggingService } from '../logging/logging.service';
+import { StorageService } from './storage.service';
 import { type AuthenticatedRequest } from '../auth/types/authenticated-request.type';
 import {
   type FileUploadResult,
@@ -22,8 +22,6 @@ import {
 
 @Injectable()
 export class FilesService {
-  private readonly uploadsDir = join(process.cwd(), 'uploads', 'messages');
-
   constructor(
     @InjectRepository(Channel)
     private readonly channelsRepository: Repository<Channel>,
@@ -31,12 +29,9 @@ export class FilesService {
     private readonly channelMembersRepository: Repository<ChannelMember>,
     @InjectRepository(ServerMember)
     private readonly serverMembersRepository: Repository<ServerMember>,
+    private readonly storage: StorageService,
     private readonly logger: LoggingService,
-  ) {
-    if (!existsSync(this.uploadsDir)) {
-      mkdirSync(this.uploadsDir, { recursive: true });
-    }
-  }
+  ) {}
 
   async handleUpload(
     channelId: string,
@@ -53,7 +48,6 @@ export class FilesService {
 
     await this.assertCanUploadToChannel(channelId, req.user.id);
 
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
     const attachments: UploadedFileAttachment[] = [];
 
     for (const file of files) {
@@ -66,10 +60,15 @@ export class FilesService {
       const storedBuffer = processed?.buffer ?? file.buffer;
       const storedMimeType = processed?.mimeType ?? file.mimetype;
 
-      await writeFile(join(this.uploadsDir, storedFilename), storedBuffer);
+      const url = await this.storage.upload({
+        key: `messages/${channelId}/${storedFilename}`,
+        body: storedBuffer,
+        contentType: storedMimeType,
+        originalName: file.originalname,
+      });
 
       attachments.push({
-        url: `${baseUrl}/uploads/messages/${storedFilename}`,
+        url,
         fileName: file.originalname,
         mimeType: storedMimeType,
         sizeBytes: storedBuffer.length,
@@ -153,7 +152,7 @@ export class FilesService {
       .replace(/^-|-$/g, '')
       .slice(0, 40);
 
-    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    const unique = randomUUID();
     return `${baseName || 'file'}-${unique}${extension}`;
   }
 
