@@ -31,6 +31,9 @@
     "db:seed": "npm --workspace=@talkie/api run db:seed"
   },
   "devDependencies": {
-    "nx": "^20.4.0"
+    "nx": "24.0.2"
+  },
+  "overrides": {
+    "glob": "^13.0.0"
   }
 }
