@@ -32,9 +32,10 @@
 
 ## 🌟 Overview
 
-The Talkie frontend is a single-page application (SPA) that provides a full Discord-like chat experience. It communicates with the Talkie backend via REST APIs for data operations and Socket.IO WebSockets for real-time features like messaging, typing indicators, and presence updates.
+The Talkie frontend is a single-page application (SPA) that provides a full Discord-like chat experience. It communicates with the Talkie api via REST APIs for data operations and Socket.IO WebSockets for real-time features like messaging, typing indicators, and presence updates.
 
 **Key highlights:**
+
 - 💬 Real-time chat with channels, DMs, threads, reactions, and file attachments
 - 🔐 Full auth flow: login, signup, Google OAuth, 2FA with TOTP, password reset
 - 🟢 Multi-device presence system with online/idle/DND/offline states
@@ -49,34 +50,34 @@ The Talkie frontend is a single-page application (SPA) that provides a full Disc
 
 ### Core
 
-| Technology | Version | Role | Details |
-|------------|---------|------|---------|
-| **[React](https://reactjs.org/)** | 17.x | UI library | Component-based architecture with hooks for state management and side effects. Declarative rendering with efficient virtual DOM diffing. |
-| **[TypeScript](https://www.typescriptlang.org/)** | 4.x | Language | Static typing shared with the backend. Prevents common JavaScript bugs, enhances IDE autocompletion, and makes large-scale refactoring safe. |
-| **[Vite](https://vitejs.dev/)** | 2.x | Build tool & dev server | Native ES module development server with sub-second Hot Module Replacement (HMR). Production builds use Rollup with tree-shaking and manual chunk splitting for optimal bundle sizes. |
+| Technology                                        | Version | Role                    | Details                                                                                                                                                                               |
+| ------------------------------------------------- | ------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[React](https://reactjs.org/)**                 | 17.x    | UI library              | Component-based architecture with hooks for state management and side effects. Declarative rendering with efficient virtual DOM diffing.                                              |
+| **[TypeScript](https://www.typescriptlang.org/)** | 4.x     | Language                | Static typing shared with the api. Prevents common JavaScript bugs, enhances IDE autocompletion, and makes large-scale refactoring safe.                                              |
+| **[Vite](https://vitejs.dev/)**                   | 2.x     | Build tool & dev server | Native ES module development server with sub-second Hot Module Replacement (HMR). Production builds use Rollup with tree-shaking and manual chunk splitting for optimal bundle sizes. |
 
 ### UI & Styling
 
-| Technology | Version | Role | Details |
-|------------|---------|------|---------|
-| **[Chakra UI](https://chakra-ui.com/)** | 1.x | Component library | Accessible, composable React components with built-in dark/light mode support. Provides a theming system with semantic tokens, responsive style props, and a rich set of pre-built components (Modal, Drawer, Toast, etc.). |
-| **[Emotion](https://emotion.sh/)** | 11.x | CSS-in-JS engine | Runtime styling engine powering Chakra UI. Supports dynamic, prop-based styles with automatic vendor prefixing and server-side rendering compatibility. Includes both `@emotion/react` (core) and `@emotion/styled` (styled API). |
-| **[Framer Motion](https://www.framer.com/motion/)** | 4.x | Animation library | Declarative animations for React components. Powers smooth page transitions, modal enter/exit animations, hover effects, and micro-interactions. Required by Chakra UI for its `AnimatePresence` features. |
-| **[@fontsource/sora](https://fontsource.org/fonts/sora)** | 4.x | Typography | Self-hosted Sora font — a modern geometric sans-serif typeface. Eliminates FOUT (Flash of Unstyled Text) by bundling the font locally instead of loading from Google Fonts CDN. |
+| Technology                                                | Version | Role              | Details                                                                                                                                                                                                                           |
+| --------------------------------------------------------- | ------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[Chakra UI](https://chakra-ui.com/)**                   | 1.x     | Component library | Accessible, composable React components with built-in dark/light mode support. Provides a theming system with semantic tokens, responsive style props, and a rich set of pre-built components (Modal, Drawer, Toast, etc.).       |
+| **[Emotion](https://emotion.sh/)**                        | 11.x    | CSS-in-JS engine  | Runtime styling engine powering Chakra UI. Supports dynamic, prop-based styles with automatic vendor prefixing and server-side rendering compatibility. Includes both `@emotion/react` (core) and `@emotion/styled` (styled API). |
+| **[Framer Motion](https://www.framer.com/motion/)**       | 4.x     | Animation library | Declarative animations for React components. Powers smooth page transitions, modal enter/exit animations, hover effects, and micro-interactions. Required by Chakra UI for its `AnimatePresence` features.                        |
+| **[@fontsource/sora](https://fontsource.org/fonts/sora)** | 4.x     | Typography        | Self-hosted Sora font — a modern geometric sans-serif typeface. Eliminates FOUT (Flash of Unstyled Text) by bundling the font locally instead of loading from Google Fonts CDN.                                                   |
 
 ### Communication
 
-| Technology | Version | Role | Details |
-|------------|---------|------|---------|
-| **[Socket.IO Client](https://socket.io/)** | 4.x | WebSocket client | Manages real-time connections to the backend's `/chat` and `/notifications` namespaces. Handles automatic reconnection, JWT-authenticated handshakes, and room-based event subscriptions. |
-| **[Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API)** | Native | HTTP client | Custom `requestJson<T>()` wrapper with automatic JWT header injection, 401 → silent refresh → retry logic, structured error handling, and response envelope unwrapping. |
+| Technology                                                                  | Version | Role             | Details                                                                                                                                                                               |
+| --------------------------------------------------------------------------- | ------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[Socket.IO Client](https://socket.io/)**                                  | 4.x     | WebSocket client | Manages real-time connections to the api's `/chat` and `/notifications` namespaces. Handles automatic reconnection, JWT-authenticated handshakes, and room-based event subscriptions. |
+| **[Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API)** | Native  | HTTP client      | Custom `requestJson<T>()` wrapper with automatic JWT header injection, 401 → silent refresh → retry logic, structured error handling, and response envelope unwrapping.               |
 
 ### Routing & State
 
-| Technology | Version | Role | Details |
-|------------|---------|------|---------|
-| **[React Router](https://reactrouter.com/)** | 5.x | Client-side routing | Declarative route definitions with protected route patterns. Auth-aware redirects, nested layouts (main chat layout, settings layout), and dynamic parameters for server/channel navigation. |
-| **[localStorage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage)** | Native | Auth persistence | Stores `access_token` and serialized `user` object for session restoration across page reloads. Token refresh is triggered automatically on 401 responses. |
+| Technology                                                                               | Version | Role                | Details                                                                                                                                                                                      |
+| ---------------------------------------------------------------------------------------- | ------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[React Router](https://reactrouter.com/)**                                             | 5.x     | Client-side routing | Declarative route definitions with protected route patterns. Auth-aware redirects, nested layouts (main chat layout, settings layout), and dynamic parameters for server/channel navigation. |
+| **[localStorage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage)** | Native  | Auth persistence    | Stores `access_token` and serialized `user` object for session restoration across page reloads. Token refresh is triggered automatically on 401 responses.                                   |
 
 ---
 
@@ -116,25 +117,26 @@ The Talkie frontend is a single-page application (SPA) that provides a full Disc
             └──────────┬──────────┘
                        │
               ┌────────┴────────┐
-              │  Backend API    │
+              │  api API    │
               │  (port 3000)    │
               └─────────────────┘
 ```
 
 ### Data Flow
 
-| Flow | Path |
-|------|------|
-| **User action** | Component → Service → `requestJson()` → Backend REST API |
-| **Real-time receive** | Backend Socket.IO → `supabase.ts` adapter → Component state update |
-| **Auth flow** | `auth-api.service` → `authStorage` → `useAuth()` hook → Components |
-| **Token refresh** | 401 response → `api.service` auto-refresh → retry original request |
+| Flow                  | Path                                                               |
+| --------------------- | ------------------------------------------------------------------ |
+| **User action**       | Component → Service → `requestJson()` → api REST API               |
+| **Real-time receive** | api Socket.IO → `supabase.ts` adapter → Component state update     |
+| **Auth flow**         | `auth-api.service` → `authStorage` → `useAuth()` hook → Components |
+| **Token refresh**     | 401 response → `api.service` auto-refresh → retry original request |
 
 ---
 
 ## ✨ Features
 
 ### Chat Interface
+
 - **Server sidebar** — List of joined servers with unread indicators
 - **Channel list** — Categorized channels with read/unread states
 - **Message area** — Scrollable messages with author info, timestamps, reactions
@@ -144,6 +146,7 @@ The Talkie frontend is a single-page application (SPA) that provides a full Disc
 - **Message actions** — Edit, delete, "Delete for Everyone" (24h window), react
 
 ### Authentication
+
 - **Login/Signup** — Form-based with validation
 - **Google OAuth** — One-click redirect flow with callback handler
 - **2FA Setup** — QR code display, TOTP verification, enable/disable toggle
@@ -151,11 +154,13 @@ The Talkie frontend is a single-page application (SPA) that provides a full Disc
 - **Auto-refresh** — Silent token rotation on 401 responses
 
 ### Settings & Admin
+
 - **Profile settings** — Username, display name, avatar, password change
 - **2FA management** — Setup, enable, disable from settings
 - **Admin panel** — Role management, user management (admin-only)
 
 ### Presence & Notifications
+
 - **Status management** — Set online/idle/DND/offline
 - **Heartbeat** — 30-second keepalive to maintain presence
 - **Notification center** — Real-time mention and DM notifications
@@ -179,7 +184,7 @@ frontend/
     ├── index.css                 # Base styles
     │
     ├── app/                      # Core application logic
-    │   ├── supabase.ts           # Backend API adapter
+    │   ├── supabase.ts           # api API adapter
     │   │                         #   - WebSocket connection management
     │   │                         #   - QueryBuilder for REST API calls
     │   │                         #   - Real-time message subscription
@@ -251,8 +256,9 @@ frontend/
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Node.js 16+
-- Talkie Backend running at `http://localhost:3000`
+- Talkie api running at `http://localhost:3000`
 
 ### Setup
 
@@ -264,26 +270,27 @@ npm install
 npm run dev
 # → Opens at http://localhost:3001
 
-# 3. (Optional) Custom backend URL
-echo "VITE_API_URL=http://your-backend:3000" > .env
+# 3. (Optional) Custom api URL
+echo "VITE_API_URL=http://your-api:3000" > .env
 ```
 
 ---
 
 ## 🛣️ Routing
 
-| Path | Component | Auth Required | Description |
-|------|-----------|---------------|-------------|
-| `/` | `RootEntry` | ✅ | Redirects to first server/channel or login |
-| `/login` | `LoginView` | ❌ | Login and signup forms |
-| `/oauth` | `OAuthCallbackView` | ❌ | Google OAuth callback handler |
-| `/reset-password/` | `ResetPasswordView` | ❌ | Password reset form |
-| `/servers/:serverId/channels/:channelId` | `IndexView` | ✅ | Main chat interface |
-| `/settings/` | `SettingsView` | ✅ | User profile and account settings |
-| `/settings/admin` | `AdminManagementView` | ✅ + Admin | Admin panel (role-gated) |
-| `*` | `NotFoundView` | ❌ | 404 page |
+| Path                                     | Component             | Auth Required | Description                                |
+| ---------------------------------------- | --------------------- | ------------- | ------------------------------------------ |
+| `/`                                      | `RootEntry`           | ✅            | Redirects to first server/channel or login |
+| `/login`                                 | `LoginView`           | ❌            | Login and signup forms                     |
+| `/oauth`                                 | `OAuthCallbackView`   | ❌            | Google OAuth callback handler              |
+| `/reset-password/`                       | `ResetPasswordView`   | ❌            | Password reset form                        |
+| `/servers/:serverId/channels/:channelId` | `IndexView`           | ✅            | Main chat interface                        |
+| `/settings/`                             | `SettingsView`        | ✅            | User profile and account settings          |
+| `/settings/admin`                        | `AdminManagementView` | ✅ + Admin    | Admin panel (role-gated)                   |
+| `*`                                      | `NotFoundView`        | ❌            | 404 page                                   |
 
 ### Route Protection
+
 - Unauthenticated users → redirected to `/login`
 - Authenticated users at `/` → smart redirect to their first server's first channel
 - Non-admin users at `/settings/admin` → redirected to `/settings/`
@@ -297,22 +304,23 @@ echo "VITE_API_URL=http://your-backend:3000" > .env
 The core HTTP client wraps the native Fetch API with:
 
 ```typescript
-const data = await requestJson<ResponseType>('/endpoint', {
-  method: 'POST',
-  body: { key: 'value' },
+const data = await requestJson<ResponseType>("/endpoint", {
+  method: "POST",
+  body: { key: "value" },
 });
 ```
 
 **Built-in behaviors:**
+
 - **Auto token injection** — Reads `access_token` from localStorage, sets `Authorization: Bearer` header
 - **Silent refresh on 401** — Attempts one token refresh, then retries the original request
 - **Response unwrapping** — Strips `{ success, results }` envelope, returns `results` directly
 - **Structured errors** — Throws `ApiError` with status code, message, and validation details
 - **FormData support** — Detects `FormData` body and omits `Content-Type` header
 
-### Backend Adapter (`supabase.ts`)
+### api Adapter (`supabase.ts`)
 
-A compatibility layer that adapts the original Supabase-based API calls to the custom NestJS backend:
+A compatibility layer that adapts the original Supabase-based API calls to the custom NestJS api:
 
 - `supabase.auth.user()` — Returns cached user from localStorage
 - `supabase.auth.signOut()` — Calls `/auth/logout` and clears local state
@@ -328,10 +336,10 @@ A compatibility layer that adapts the original Supabase-based API calls to the c
 
 Two persistent WebSocket connections are managed in `supabase.ts`:
 
-| Socket | Namespace | Purpose |
-|--------|-----------|---------|
-| `chatSocket` | `/chat` | Messages, typing, presence, channel updates |
-| `notificationsSocket` | `/notifications` | Mention and DM notifications |
+| Socket                | Namespace        | Purpose                                     |
+| --------------------- | ---------------- | ------------------------------------------- |
+| `chatSocket`          | `/chat`          | Messages, typing, presence, channel updates |
+| `notificationsSocket` | `/notifications` | Mention and DM notifications                |
 
 ### Connection Lifecycle
 
@@ -356,19 +364,19 @@ Heartbeat interval (30s) → socket.emit('presence:heartbeat')
 
 ### Events Consumed
 
-| Event | Handler |
-|-------|---------|
-| `message:created` | Adds new message to chat |
-| `message:updated` | Updates edited message |
-| `message:deleted` | Removes deleted message |
-| `message:deletedForEveryone` | Removes message for all users |
-| `reaction:added` | Updates reaction count |
-| `reaction:removed` | Updates reaction count |
-| `typing:start` / `typing:stop` | Shows/hides typing indicator |
-| `presence:update` | Updates user online status |
-| `presence:restored` | Restores status on reconnect |
-| `channel:updated` | Updates unread indicators |
-| `notification:recieved` | Shows new notification |
+| Event                          | Handler                       |
+| ------------------------------ | ----------------------------- |
+| `message:created`              | Adds new message to chat      |
+| `message:updated`              | Updates edited message        |
+| `message:deleted`              | Removes deleted message       |
+| `message:deletedForEveryone`   | Removes message for all users |
+| `reaction:added`               | Updates reaction count        |
+| `reaction:removed`             | Updates reaction count        |
+| `typing:start` / `typing:stop` | Shows/hides typing indicator  |
+| `presence:update`              | Updates user online status    |
+| `presence:restored`            | Restores status on reconnect  |
+| `channel:updated`              | Updates unread indicators     |
+| `notification:recieved`        | Shows new notification        |
 
 ---
 
@@ -399,15 +407,15 @@ The app uses **Sora** as its primary font family — a clean geometric sans-seri
 
 Vite is configured with manual chunk splitting to optimize production bundle sizes:
 
-| Chunk | Contents | Rationale |
-|-------|----------|-----------|
-| `chakra-ui` | @chakra-ui/* + @emotion/* | Largest dependency, cached independently |
-| `router` | react-router-dom | Routing logic separated from UI |
-| `socket` | socket.io-client | WebSocket client loaded lazily |
-| `supabase` | @supabase/* | Backend adapter layer |
-| `motion` | framer-motion | Animation library |
-| `fonts` | @fontsource/* | Font files |
-| `vendor` | Everything else from node_modules | Catch-all vendor chunk |
+| Chunk       | Contents                          | Rationale                                |
+| ----------- | --------------------------------- | ---------------------------------------- |
+| `chakra-ui` | @chakra-ui/* + @emotion/*         | Largest dependency, cached independently |
+| `router`    | react-router-dom                  | Routing logic separated from UI          |
+| `socket`    | socket.io-client                  | WebSocket client loaded lazily           |
+| `supabase`  | @supabase/*                       | api adapter layer                        |
+| `motion`    | framer-motion                     | Animation library                        |
+| `fonts`     | @fontsource/*                     | Font files                               |
+| `vendor`    | Everything else from node_modules | Catch-all vendor chunk                   |
 
 This strategy ensures that updates to application code don't invalidate cached vendor bundles.
 
@@ -415,11 +423,11 @@ This strategy ensures that updates to application code don't invalidate cached v
 
 ## 📜 Scripts
 
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start Vite dev server with HMR (port 3001) |
+| Script          | Description                                        |
+| --------------- | -------------------------------------------------- |
+| `npm run dev`   | Start Vite dev server with HMR (port 3001)         |
 | `npm run build` | Type-check with `tsc` then build production bundle |
-| `npm run serve` | Preview production build locally |
+| `npm run serve` | Preview production build locally                   |
 
 ---
 

@@ -1,6 +1,0 @@
-scrape_configs:
-  - job_name: talkie-backend
-    static_configs:
-      - targets: ['backend:3000'] #  NestJS app container
-    metrics_path: /metrics
-    scrape_interval: 30s

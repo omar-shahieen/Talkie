@@ -1,0 +1,56 @@
+// Discover docker containers
+discovery.docker "talkie" {
+  host = "unix:///var/run/docker.sock"
+}
+
+// Filter api container and map container name label
+discovery.relabel "api" {
+  targets = discovery.docker.talkie.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/?(talkie-api.*)"
+    action        = "keep"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/?(.*)"
+    target_label  = "container"
+  }
+}
+
+// Stream stdout/stderr from api container
+loki.source.docker "api" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.relabel.api.output
+  relabel_rules = discovery.relabel.api.rules
+  forward_to    = [loki.process.parse_json.receiver]
+}
+
+// Pipeline: parse the structured JSON from stdout
+loki.process "parse_json" {
+  forward_to = [loki.write.default.receiver]
+
+  stage.json {
+    expressions = {
+      level         = "level",
+      correlationId = "correlationId",
+      context       = "context",
+    }
+  }
+
+  stage.labels {
+    values = {
+      level         = null,
+      correlationId = null,
+      context       = null,
+    }
+  }
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
