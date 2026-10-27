@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '../../app/supabase';
 import AppChatContainer from '../components/AppChatContainer';
 import { acknowledgeChannel } from '../../app/services/channel.service';
+import { fetchMessages } from '../../app/services/message.service';
 
 function IndexView() {
   const { serverId = '', channelId = '' } = useParams<{
@@ -18,18 +18,21 @@ function IndexView() {
     let isMounted = true;
 
     async function acknowledgeLatestChannelMessage() {
-      const { data } = await supabase
-        .from(`messages:channel_id=eq.${channelId}`)
-        .select('*')
-        .limit(1)
-        .order('created_at', { ascending: false });
+      try {
+        const messages = await fetchMessages(channelId);
+        const latestMessageId =
+          messages.length > 0
+            ? messages[messages.length - 1].id
+            : null;
 
-      const latestMessageId = data?.[0]?.id;
-      if (!isMounted || !latestMessageId) {
-        return;
+        if (!isMounted || !latestMessageId) {
+          return;
+        }
+
+        await acknowledgeChannel(channelId, latestMessageId);
+      } catch (err) {
+        console.error('Error acknowledging channel:', err);
       }
-
-      await acknowledgeChannel(channelId, latestMessageId);
     }
 
     void acknowledgeLatestChannelMessage();

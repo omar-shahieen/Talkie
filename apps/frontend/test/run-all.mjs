@@ -1,7 +1,15 @@
+import { register } from 'node:module';
 import { run } from 'node:test';
 import { spec } from 'node:test/reporters';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+// Automatically register TypeScript/ESM loader hook if not already registered via CLI
+try {
+  register(new URL('./loader.mjs', import.meta.url).href, import.meta.url);
+} catch {
+  // Already registered or unsupported
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -16,9 +24,15 @@ console.log('====================================================');
 console.log('TALKIE FRONTEND <-> API INTEGRATION TEST RUNNER');
 console.log('====================================================\n');
 
+let hasFailures = false;
+
 const testStream = run({
   files: testFiles,
   concurrency: 1, // run sequentially to avoid state collisions
+});
+
+testStream.on('test:fail', () => {
+  hasFailures = true;
 });
 
 testStream.compose(spec).pipe(process.stdout);
@@ -32,4 +46,8 @@ testStream.on('end', () => {
   console.log('\n====================================================');
   console.log('ALL INTEGRATION TEST SUITES COMPLETED');
   console.log('====================================================');
+  // Explicit exit so lingering background intervals or open sockets don't hang the process
+  setTimeout(() => {
+    process.exit(hasFailures ? 1 : 0);
+  }, 100).unref();
 });

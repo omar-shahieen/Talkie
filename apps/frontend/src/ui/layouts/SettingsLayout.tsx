@@ -117,15 +117,15 @@ function SettingsListItem({
       marginY="2px"
       borderRadius="sm"
       cursor="pointer"
-      color={!!color ? color : active ? colors.dark : 'whiteAlpha.500'}
+      color={color ? color : active ? colors.dark : 'whiteAlpha.500'}
       backgroundColor={active ? colors.lightGray : 'transparent'}
       _hover={{
-        backgroundColor: !!hoverBackgroundColor
+        backgroundColor: hoverBackgroundColor
           ? hoverBackgroundColor
           : colors.grayLight,
       }}
     >
-      <Text>{!!label ? label : children}</Text>
+      <Text>{label ? label : children}</Text>
     </Box>
   );
 }

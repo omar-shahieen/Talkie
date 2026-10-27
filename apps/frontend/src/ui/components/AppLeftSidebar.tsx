@@ -25,7 +25,8 @@ import {
 } from '@chakra-ui/react';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getChatSocket, supabase } from '../../app/supabase';
+import { getChatSocket, disconnectSockets } from '../../app/realtime';
+import { supabase } from '../../app/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { OTHER_REDIRECT_ROUTE } from '../../routes/defaultRoute';
 import { useThemedColors } from '../theme/colors';
@@ -105,7 +106,11 @@ function AppLeftSidebarTopbar() {
           ) : (
             <MenuItem
               onClick={async () => {
-                await supabase.auth.signOut();
+                await logoutApi().catch(() => {});
+                disconnectSockets();
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
                 navigate('/login', { replace: true });
                 window.location.reload();
               }}

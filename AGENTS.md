@@ -237,7 +237,7 @@ Two distinct namespaces are used:
 
 ### 5.1 Technology Version Notes
 
-- **React Router**: Uses `react-router-dom` **v5.3.4** (uses `useHistory`, `useLocation`, `<Switch>`, `<Route>`). Do **not** use React Router v6 hooks like `useNavigate`.
+- **React Router**: Uses `react-router-dom` **v6.x** (uses `useNavigate`, `useLocation`, `<Routes>`, `<Route>`, `<Navigate>`).
 - **Chakra UI**: Uses Chakra UI **v2.10.x** with `@emotion/react` and `framer-motion`.
 - **Vite**: Configured to serve on port `3001`.
 
@@ -260,7 +260,7 @@ When implementing features or bug fixes, keep the following rules in mind:
 2. **Handling Response Envelopes**:
    The api's `TransformInterceptor` automatically wraps returned data in `{ success: true, results: data }`. Do not manually wrap responses in `{ results: ... }` in your controllers.
 3. **Frontend Routing Compatibility**:
-   Stick to `react-router-dom` v5 patterns. Use `const history = useHistory()` and `history.push(...)`.
+   Stick to `react-router-dom` v6 patterns. Use `const navigate = useNavigate()` and `navigate(...)`.
 4. **Environment Variables**:
    Reference `apps/api/.env.example` when adding or modifying api configurations. Never hardcode credentials or secrets.
 5. **Linting & Verification Before Handover**:
