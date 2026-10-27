@@ -105,7 +105,7 @@ Interactive REST API documentation and OpenAPI schemas are provided via Swagger.
 1. **Start the api development server**:
    ```bash
    # From apps/api directory:
-   npm run start:dev
+   npm run dev
 
    # Or from the repository root:
    npm run dev:api
@@ -150,11 +150,11 @@ Start the application:
 
 ```bash
 # development
-npm run start:dev
+npm run dev
 
 # production build
 npm run build
-npm run start:prod
+npm run start
 ```
 
 ---
@@ -209,7 +209,7 @@ docker run -it --rm `
   -e REDIS_URL=redis://:password@host.docker.internal:6379 `
   -v ${PWD}/apps/api/src:/usr/src/app/apps/api/src `
   -v talkie_uploads:/usr/src/app/uploads `
-  talkie-api:dev npm run start:dev
+  talkie-api:dev npm run dev
 ```
 
 **Bash / Linux / macOS:**
@@ -224,7 +224,7 @@ docker run -it --rm \
   -e REDIS_URL=redis://:password@host.docker.internal:6379 \
   -v $(pwd)/apps/api/src:/usr/src/app/apps/api/src \
   -v talkie_uploads:/usr/src/app/uploads \
-  talkie-api:dev npm run start:dev
+  talkie-api:dev npm run dev
 ```
 
 ---

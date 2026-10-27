@@ -149,7 +149,7 @@ npm run format:check
 npm run test
 
 # api unit tests (Jest) — plus watch & coverage variants
-npm run test:unit
+npm test
 npm run test:watch
 npm run test:cov
 
@@ -157,9 +157,9 @@ npm run test:cov
 npm run test:e2e
 
 # api live integration scripts (require a running api)
-npm run test:auth
-npm run test:messaging
-npm run test:upload
+npm run test:integration:auth
+npm run test:integration:messaging
+npm run test:integration:upload
 ```
 
 ### 3.6 Database Seeding
