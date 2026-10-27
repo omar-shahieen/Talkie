@@ -15,6 +15,13 @@
       "inputs": ["default"],
       "cache": true
     },
+    "lint:fix": {
+      "cache": false
+    },
+    "format:check": {
+      "inputs": ["default"],
+      "cache": true
+    },
     "typecheck": {
       "inputs": ["default", "^production"],
       "cache": true
