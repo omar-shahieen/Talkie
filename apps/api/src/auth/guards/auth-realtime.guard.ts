@@ -1,7 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { WsException } from '@nestjs/websockets';
-import { jwtConstants, JwtPayload } from '../constants';
+import { JwtPayload } from '../constants';
 import { AuthenticatedSocket } from '../types/authenticated-socket.type';
 import { Socket } from 'socket.io';
 import { LoggingService } from '../../logging/logging.service';
@@ -33,9 +33,7 @@ export class RealtimeAuthGuard implements CanActivate {
     }
 
     try {
-      const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
-        secret: jwtConstants.secret,
-      });
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
 
       client.data.user = { id: payload.sub, email: payload.email };
       this.logger.log(

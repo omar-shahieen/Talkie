@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Socket } from 'socket.io';
-import { jwtConstants, JwtPayload } from '../constants';
+import { JwtPayload } from '../constants';
 
 interface SocketWithAuth extends Socket {
   data: {
@@ -27,9 +27,7 @@ export class SocketAuthMiddleware {
         throw new Error('Unauthorized');
       }
 
-      const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
-        secret: jwtConstants.secret,
-      });
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
 
       socket.data.user = { id: payload.sub, email: payload.email };
       next();

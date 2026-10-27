@@ -96,8 +96,10 @@ export class AuthController {
   forgetPassword(@Body() forgetPassowrdDto: ForgetPasswordDto) {
     // Password reset links must point at the SPA origin (Vite default :3001), not the API host.
     const frontendBase =
-      process.env.FRONTEND_APP_URL?.replace(/\/$/, '') ||
-      'http://localhost:3001';
+      (process.env.FRONTEND_END_URL ?? process.env.FRONTEND_APP_URL)?.replace(
+        /\/$/,
+        '',
+      ) || 'http://localhost:3001';
     return this.authService.forgetPassword(
       forgetPassowrdDto.email,
       frontendBase,

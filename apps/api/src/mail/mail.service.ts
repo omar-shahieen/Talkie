@@ -80,9 +80,10 @@ export class MailService {
   }) {
     await this.sendEmail({
       to: payload.email,
-      subject: 'Two-factor authentication disabled',
-      template: 'tfa-disabled',
+      subject: 'Reset Your Password',
+      template: 'reset-password',
       context: {
+        name: payload.username,
         username: payload.username,
         resetLink: payload.reseturlLink,
       },

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { MailService } from './mail.service';
+import { existsSync } from 'fs';
 import { join } from 'path';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/adapters/handlebars.adapter';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -13,6 +14,10 @@ import { BullModule } from '@nestjs/bullmq';
     MailerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
+        const templatesDir = existsSync(join(process.cwd(), 'templates'))
+          ? join(process.cwd(), 'templates')
+          : join(process.cwd(), 'apps', 'api', 'templates');
+
         return {
           // Conditional Transport Logic
           transport: {
@@ -28,7 +33,7 @@ import { BullModule } from '@nestjs/bullmq';
             from: config.get<string>('MAIL_FROM'),
           },
           template: {
-            dir: join(process.cwd(), 'templates'),
+            dir: templatesDir,
             adapter: new HandlebarsAdapter(),
             options: {
               strict: true,

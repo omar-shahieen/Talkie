@@ -44,6 +44,7 @@ WORKDIR /usr/src/app
 
 COPY --from=build --chown=node:node /usr/src/app/node_modules ./node_modules
 COPY --from=build --chown=node:node /usr/src/app/apps/api/dist ./dist
+COPY --from=build --chown=node:node /usr/src/app/apps/api/templates ./templates
 
 EXPOSE 3000
 USER node

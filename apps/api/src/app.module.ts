@@ -50,7 +50,7 @@ function getDatabaseUrl(config: ConfigService): string {
 }
 
 function getRedisUrl(config: ConfigService): string {
-  const redisUrl = config.getOrThrow<string>('REDIS_URL');
+  const redisUrl = config.get<string>('REDIS_URL');
   if (redisUrl) return redisUrl;
   const host = config.get<string>('REDIS_HOST', 'localhost');
   const port = config.get<number>('REDIS_PORT', 6379);
@@ -89,9 +89,10 @@ function getRedisUrl(config: ConfigService): string {
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         subscribers: [__dirname + '/**/*.subscriber{.ts,.js}'],
         synchronize:
-          (config.get<string>('NODE_ENV') === 'production'
-            ? 'false'
-            : 'true') === 'true',
+          (config.get<string>('DB_SYNC') ??
+            (config.get<string>('NODE_ENV') === 'production'
+              ? 'false'
+              : 'true')) === 'true',
 
         // logging: true,
       }),
@@ -122,8 +123,8 @@ function getRedisUrl(config: ConfigService): string {
         throttlers: [
           {
             name: 'short',
-            ttl: 1000, // 1 second window
-            limit: 50, // stay under  50 req/s global limit for resource
+            ttl: Number(config.get('THROTTLE_TTL') || 1000), // 1 second default window
+            limit: Number(config.get('THROTTLE_LIMIT') || 50), // stay under 50 req/s global limit
           },
         ],
         storage: new ThrottlerStorageRedisService(getRedisUrl(config)),

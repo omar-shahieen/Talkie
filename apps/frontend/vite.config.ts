@@ -29,10 +29,6 @@ export default defineConfig({
             return 'socket';
           }
 
-          if (id.includes('@supabase')) {
-            return 'supabase';
-          }
-
           if (id.includes('framer-motion')) {
             return 'motion';
           }

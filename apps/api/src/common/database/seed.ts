@@ -49,8 +49,22 @@ const loadEnvFile = (filePath: string): void => {
   }
 };
 
-loadEnvFile(resolve(process.cwd(), '.env'));
-loadEnvFile(resolve(process.cwd(), '.env.example'));
+for (const candidate of [
+  resolve(process.cwd(), '.env'),
+  resolve(process.cwd(), 'apps/api/.env'),
+  resolve(process.cwd(), '../../.env'),
+]) {
+  loadEnvFile(candidate);
+}
+
+if (
+  process.env.NODE_ENV === 'production' &&
+  process.env.ALLOW_PROD_SEED !== 'true'
+) {
+  throw new Error(
+    'Refusing to run destructive seed script (dropSchema: true) when NODE_ENV=production. Set ALLOW_PROD_SEED=true to override.',
+  );
+}
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is required to run the seed script');

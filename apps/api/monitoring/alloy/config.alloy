@@ -9,7 +9,7 @@ discovery.relabel "api" {
 
   rule {
     source_labels = ["__meta_docker_container_name"]
-    regex         = "/?(talkie-api.*)"
+    regex         = "/?(talkie-(api|worker).*)"
     action        = "keep"
   }
 

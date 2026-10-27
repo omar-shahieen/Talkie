@@ -1,6 +1,4 @@
 # ==============================================================================
-# Talkie - Production Docker Compose Specification
-#
 # Usage (run from monorepo root):
 #   docker compose --env-file apps/api/.env up -d --build
 # ==============================================================================
@@ -12,9 +10,39 @@ x-logging: &default-logging
     max-size: "10m"
     max-file: "3"
 
-x-common: &service-defaults
+x-service-defaults: &service-defaults
   restart: unless-stopped
   logging: *default-logging
+
+# Docker-internal connection strings, shared by api and worker.
+x-app-env: &app-env
+  DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+  REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+
+# Shared definition for the backend image (api + worker).
+x-app: &app-defaults
+  <<: *service-defaults
+  image: talkie-api:${GIT_COMMIT:-local-dev}
+  build:
+    context: .
+    dockerfile: apps/api/Dockerfile
+    target: production
+    args:
+      GIT_COMMIT: ${GIT_COMMIT:-local-dev}
+      NODE_ENV: ${NODE_ENV:-production}
+  env_file:
+    - ./apps/api/.env
+  environment:
+    <<: *app-env
+  networks:
+    - edge
+    - data
+    - monitoring
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
 
 services:
   postgres:
@@ -64,45 +92,16 @@ services:
       start_period: 5s
 
   api:
-    <<: *service-defaults
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-      target: production
-      args:
-        GIT_COMMIT: ${GIT_COMMIT:-local-dev}
-        NODE_ENV: ${NODE_ENV:-production}
-      # cache_from:
-      #   - ${api_IMAGE_CACHE:-talkie-api:cache}
-    env_file:
-      - ./apps/api/.env
+    <<: *app-defaults
+    # `environment` is replaced (not merged) when redefined, so re-merge the anchor.
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
-      S3_ENDPOINT: ${S3_ENDPOINT:-https://319c5421a0fad85373d5251bb3bef0ef.r2.cloudflarestorage.com}
-      S3_REGION: ${S3_REGION:-auto}
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
-      S3_SECRET_KEY: ${S3_SECRET_KEY:-}
-      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-talkie}
-      S3_PUBLIC_URL: ${S3_PUBLIC_URL:-https://pub-9d2cfb4b880140b29ba06d382c363794.r2.dev}
+      <<: *app-env
       PORT: 3000
-      FRONTEND_END_URL: ${FRONTEND_END_URL:-http://localhost:3002/}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3002}
-      FRONTEND_OAUTH_REDIRECT_URL: ${FRONTEND_OAUTH_REDIRECT_URL:-http://localhost:3002/oauth}
+    command: ["node", "dist/main.js"]
+    # greater than SHUTDOWN_TIMEOUT_MS + SHUTDOWN_DRAIN_MS
+    stop_grace_period: 25s
     ports:
       - "127.0.0.1:3000:3000"
-    command: ["node", "dist/main.js"]
-    # > SHUTDOWN_TIMEOUT_MS + SHUTDOWN_DRAIN_MS
-    stop_grace_period: 25s
-    networks:
-      - edge
-      - data
-      - monitoring
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     healthcheck:
       test:
         - CMD
@@ -115,31 +114,10 @@ services:
       start_period: 20s
 
   worker:
-    <<: *service-defaults
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-      target: production
-      args:
-        GIT_COMMIT: ${GIT_COMMIT:-local-dev}
-        NODE_ENV: ${NODE_ENV:-production}
+    <<: *app-defaults
     command: ["node", "dist/worker.js"]
-    # > WORKER_SHUTDOWN_TIMEOUT_MS
+    # greater than WORKER_SHUTDOWN_TIMEOUT_MS
     stop_grace_period: 45s
-    env_file:
-      - ./apps/api/.env
-    environment:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
-    networks:
-      - edge
-      - data
-      - monitoring
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
 
   frontend:
     <<: *service-defaults
@@ -152,8 +130,6 @@ services:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
         GIT_COMMIT: ${GIT_COMMIT:-local-dev}
         NODE_ENV: ${NODE_ENV:-production}
-      # cache_from:
-      #   - ${FRONTEND_IMAGE_CACHE:-talkie-frontend:cache}
     ports:
       - "127.0.0.1:3002:8080"
     networks:
@@ -231,7 +207,7 @@ services:
     ports:
       - "127.0.0.1:3003:3000"
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
     volumes:
       - ./apps/api/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./apps/api/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
