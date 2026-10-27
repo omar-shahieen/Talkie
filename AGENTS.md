@@ -12,7 +12,7 @@ Welcome to **Talkie**! This guide is tailored for AI agents and human developers
 
 | Package            | Directory       | Tech Stack                                                                                                        | Role / Description                                                                    |
 | ------------------ | --------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `@talkie/backend`  | `apps/backend`  | NestJS 11, TypeScript 5.9, TypeORM (PostgreSQL), Redis (BullMQ, Cache, Throttler), Socket.IO, Winston, Prometheus | Core REST API, WebSockets, background job worker, RBAC authorization, file processing |
+| `@talkie/api`      | `apps/api`      | NestJS 11, TypeScript 5.9, TypeORM (PostgreSQL), Redis (BullMQ, Cache, Throttler), Socket.IO, Winston, Prometheus | Core REST API, WebSockets, background job worker, RBAC authorization, file processing |
 | `@talkie/frontend` | `apps/frontend` | React 18, Vite 6, TypeScript 5.9, Chakra UI v2, Emotion, Framer Motion, Socket.IO Client, React Router v5         | Real-time single-page web client (Discord-style UI)                                   |
 
 ---
@@ -22,7 +22,7 @@ Welcome to **Talkie**! This guide is tailored for AI agents and human developers
 ```text
 talkie/
 ├── apps/
-│   ├── backend/                        # @talkie/backend
+│   ├── api/                        # @talkie/api
 │   │   ├── Dockerfile                  # Multi-stage Docker build (root context)
 │   │   ├── docker-compose.monitoring.yml # Prometheus & Grafana stack
 │   │   ├── templates/                  # Handlebars email templates (welcome, 2FA, reset password)
@@ -77,14 +77,14 @@ talkie/
 ### 3.1 Dependency Management
 
 > [!IMPORTANT]
-> Always run package installs from the root. Never run `npm install` inside `apps/backend` or `apps/frontend` directly without workspace flags, or you risk breaking `package-lock.json`.
+> Always run package installs from the root. Never run `npm install` inside `apps/api` or `apps/frontend` directly without workspace flags, or you risk breaking `package-lock.json`.
 
 ```bash
 # Install all dependencies across monorepo
 npm install
 
-# Add a package to backend
-npm install <pkg-name> --workspace=@talkie/backend
+# Add a package to api
+npm install <pkg-name> --workspace=@talkie/api
 
 # Add a package to frontend
 npm install <pkg-name> --workspace=@talkie/frontend
@@ -96,11 +96,14 @@ npm install -D <pkg-name>
 ### 3.2 Running Development Servers
 
 ```bash
-# Start both backend and frontend simultaneously
+# Start both api and frontend simultaneously
 npm run dev
 
-# Start backend only (NestJS hot reload on http://localhost:3000)
-npm run dev:backend
+# Start api only (NestJS hot reload on http://localhost:3000)
+npm run dev:api
+
+# Start BullMQ worker only (NestJS hot reload, entry: src/worker.ts)
+npm run dev:worker
 
 # Start frontend only (Vite dev server on http://localhost:3001)
 npm run dev:frontend
@@ -112,47 +115,68 @@ npm run dev:frontend
 # Build all workspaces with Nx task caching
 npm run build
 
-# Build backend only (outputs to apps/backend/dist)
-npm run build:backend
+# Build api only (outputs dist/main.js AND dist/worker.js to apps/api/dist)
+npm run build:api
 
 # Build frontend only (typechecks and outputs to apps/frontend/dist)
 npm run build:frontend
 ```
 
-### 3.4 Linting & Testing
+### 3.4 Running Production Builds
 
 ```bash
-# Lint all projects
-npm run lint
+# Run compiled api (requires build:api first)
+npm run start:api
 
-# Backend-specific lint with auto-fix
-npm --workspace=@talkie/backend run lint
+# Run compiled BullMQ worker (requires build:api first)
+npm run start:worker
 
-# Run tests across projects
-npm run test
-
-# Run backend unit tests
-npm --workspace=@talkie/backend run test
-
-# Run backend e2e tests
-npm --workspace=@talkie/backend run test:e2e
+# Preview built frontend (requires build:frontend first)
+npm run start:frontend
 ```
 
-### 3.5 Database Seeding
+### 3.5 Linting, Formatting & Testing
+
+```bash
+# Lint all projects (api lint auto-fixes)
+npm run lint
+
+# Format / check formatting of api sources
+npm run format
+npm run format:check
+
+# Run tests across projects (Nx)
+npm run test
+
+# api unit tests (Jest) — plus watch & coverage variants
+npm run test:unit
+npm run test:watch
+npm run test:cov
+
+# api e2e tests
+npm run test:e2e
+
+# api live integration scripts (require a running api)
+npm run test:auth
+npm run test:messaging
+npm run test:upload
+```
+
+### 3.6 Database Seeding
 
 ```bash
 # Seed development database
-npm --workspace=@talkie/backend run seed
+npm run seed
 ```
 
-### 3.6 Docker Builds
+### 3.7 Docker Builds
 
 > [!WARNING]
 > Both Dockerfiles require the monorepo root as the build context because they copy `package.json` and `package-lock.json` to properly invoke `npm ci --workspace=...`.
 
 ```bash
-# Build backend container
-docker build -f apps/backend/Dockerfile -t talkie-backend .
+# Build api container
+docker build -f apps/api/Dockerfile -t talkie-api .
 
 # Build frontend container
 docker build -f apps/frontend/Dockerfile -t talkie-frontend .
@@ -160,11 +184,11 @@ docker build -f apps/frontend/Dockerfile -t talkie-frontend .
 
 ---
 
-## 4. Backend Architecture & Core Conventions (`@talkie/backend`)
+## 4. api Architecture & Core Conventions (`@talkie/api`)
 
 ### 4.1 Global Pipeline Execution Order
 
-In `apps/backend/src/app.module.ts`, guards, interceptors, and filters are registered in a specific global sequence:
+In `apps/api/src/app.module.ts`, guards, interceptors, and filters are registered in a specific global sequence:
 
 1. **Guards**:
    - `ThrottlerGuard`: Global Redis-backed rate limiting.
@@ -194,7 +218,7 @@ In `apps/backend/src/app.module.ts`, guards, interceptors, and filters are regis
   - BullMQ job queues (`mail` queue, `audit` queue).
   - Throttler rate-limit storage.
   - Cache manager.
-- **Local File Storage**: Uploaded message attachments are stored in `apps/backend/uploads/messages`, compressed to WebP via Sharp, and dangerous file extensions are rejected.
+- **Local File Storage**: Uploaded message attachments are stored in `apps/api/uploads/messages`, compressed to WebP via Sharp, and dangerous file extensions are rejected.
 
 ### 4.3 Real-Time Architecture (Socket.IO)
 
@@ -223,7 +247,7 @@ Two distinct namespaces are used:
   - `API_URL` defaults to `http://localhost:3000` or `VITE_API_URL`.
   - Automatically attaches `Authorization: Bearer <access_token>` from `localStorage`.
   - Catches `401 Unauthorized` responses and silently requests `/auth/refresh` before retrying the original request.
-  - Automatically unwraps the backend's `{ results }` envelope.
+  - Automatically unwraps the api's `{ results }` envelope.
 
 ---
 
@@ -232,16 +256,16 @@ Two distinct namespaces are used:
 When implementing features or bug fixes, keep the following rules in mind:
 
 1. **Adding Public Endpoints**:
-   Because `AuthJwtGuard` is global in the backend, always add the `@Public()` decorator to any controller method that does not require authentication.
+   Because `AuthJwtGuard` is global in the api, always add the `@Public()` decorator to any controller method that does not require authentication.
 2. **Handling Response Envelopes**:
-   The backend's `TransformInterceptor` automatically wraps returned data in `{ success: true, results: data }`. Do not manually wrap responses in `{ results: ... }` in your controllers.
+   The api's `TransformInterceptor` automatically wraps returned data in `{ success: true, results: data }`. Do not manually wrap responses in `{ results: ... }` in your controllers.
 3. **Frontend Routing Compatibility**:
    Stick to `react-router-dom` v5 patterns. Use `const history = useHistory()` and `history.push(...)`.
 4. **Environment Variables**:
-   Reference `apps/backend/.env.example` when adding or modifying backend configurations. Never hardcode credentials or secrets.
+   Reference `apps/api/.env.example` when adding or modifying api configurations. Never hardcode credentials or secrets.
 5. **Linting & Verification Before Handover**:
    Always run:
    ```bash
    npm run build
    ```
-   Ensure both backend and frontend build without TypeScript or bundling errors.
+   Ensure both api and frontend build without TypeScript or bundling errors.

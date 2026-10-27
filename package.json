@@ -7,14 +7,28 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "nx run-many -t dev start:dev",
-    "dev:backend": "nx start:dev @talkie/backend",
+    "dev": "nx run-many -t dev",
+    "dev:all": "nx run-many -t dev",
+    "dev:api": "nx dev @talkie/api",
+    "dev:worker": "npm --workspace=@talkie/api run dev:worker",
     "dev:frontend": "nx dev @talkie/frontend",
     "build": "nx run-many -t build",
-    "build:backend": "nx build @talkie/backend",
+    "build:api": "nx build @talkie/api",
     "build:frontend": "nx build @talkie/frontend",
+    "start:api": "npm --workspace=@talkie/api run start:api",
+    "start:worker": "npm --workspace=@talkie/api run start:worker",
+    "start:frontend": "npm --workspace=@talkie/frontend run serve",
     "test": "nx run-many -t test",
-    "lint": "nx run-many -t lint"
+    "test:unit": "npm --workspace=@talkie/api run test:unit",
+    "test:watch": "npm --workspace=@talkie/api run test:watch",
+    "test:cov": "npm --workspace=@talkie/api run test:cov",
+    "test:e2e": "npm --workspace=@talkie/api run test:e2e",
+    "lint": "nx run-many -t lint",
+    "lint:fix": "npm --workspace=@talkie/api run lint",
+    "format": "npm --workspace=@talkie/api run format",
+    "format:check": "npm --workspace=@talkie/api run format:check",
+    "seed": "npm --workspace=@talkie/api run seed",
+    "db:seed": "npm --workspace=@talkie/api run db:seed"
   },
   "devDependencies": {
     "nx": "^20.4.0"
