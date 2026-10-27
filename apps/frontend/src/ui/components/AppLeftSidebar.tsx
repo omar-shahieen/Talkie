@@ -26,7 +26,6 @@ import {
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getChatSocket, disconnectSockets } from '../../app/realtime';
-import { supabase } from '../../app/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { OTHER_REDIRECT_ROUTE } from '../../routes/defaultRoute';
 import { useThemedColors } from '../theme/colors';

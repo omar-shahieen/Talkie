@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getChatSocket } from '../app/supabase';
+import { getChatSocket } from '../app/realtime';
 
 export type UserPresence = {
   userId: string;

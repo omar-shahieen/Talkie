@@ -17,7 +17,7 @@ import { useThemedColors } from '../theme/colors';
 import { Message, AppUser } from '../../app/datamodels';
 import AppChatInput from './AppChatInput';
 import { useAuth } from '../../hooks/useAuth';
-import { getChatSocket } from '../../app/supabase';
+import { getChatSocket } from '../../app/realtime';
 import {
   fetchThreadMessages,
   toggleMessageReaction as toggleThreadReaction,

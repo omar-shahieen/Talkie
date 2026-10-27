@@ -9,7 +9,7 @@ import {
 } from '@chakra-ui/icons';
 import AppIconButton from './AppIconButton';
 import { useThemedColors } from '../theme/colors';
-import { getChatSocket } from '../../app/supabase';
+import { getChatSocket } from '../../app/realtime';
 import { Message } from '../../app/datamodels';
 import { useAuth } from '../../hooks/useAuth';
 import {

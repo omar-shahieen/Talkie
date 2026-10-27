@@ -3,7 +3,8 @@ import { Box, Divider, Link, Text, IconButton } from '@chakra-ui/react';
 import React from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useThemedColors } from '../theme/colors';
-import { supabase } from '../../app/supabase';
+import { logoutApi } from '../../app/services/auth-api.service';
+import { disconnectSockets } from '../../app/realtime';
 
 export type SettingsLayoutProps = {
   children: React.ReactNode;
@@ -78,7 +79,11 @@ function SettingsLeftSidebar() {
           color="red.600"
           hoverBackgroundColor="red.900"
           onClick={async () => {
-            await supabase.auth.signOut();
+            await logoutApi().catch(() => {});
+            disconnectSockets();
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
             navigate('/login', { replace: true });
             window.location.reload();
           }}

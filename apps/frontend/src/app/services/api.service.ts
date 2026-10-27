@@ -5,7 +5,10 @@ import {
 } from '../authStorage';
 
 // Default API URL. In development the api runs on port 3000.
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+export function getApiUrl(): string {
+  return import.meta.env?.VITE_API_URL || 'http://localhost:3000';
+}
+export const API_URL = getApiUrl();
 
 export class ApiError extends Error {
   status: number;
@@ -55,7 +58,7 @@ export function buildApiUrl(
   query?: RequestOptions['query'],
 ): string {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  const url = new URL(`${API_URL}${normalizedPath}`);
+  const url = new URL(`${getApiUrl()}${normalizedPath}`);
   return appendQuery(url, query).toString();
 }
 
@@ -175,7 +178,7 @@ async function parseResponse(response: Response) {
   }
 }
 
-async function refreshAccessToken(): Promise<string | null> {
+export async function refreshAccessToken(): Promise<string | null> {
   try {
     const response = await fetch(buildApiUrl('/auth/refresh'), {
       method: 'POST',

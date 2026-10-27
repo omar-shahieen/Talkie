@@ -12,7 +12,7 @@ import {
 import AppChatInput from './AppChatInput';
 import AppThreadPanel from './AppThreadPanel';
 import { useThemedColors } from '../theme/colors';
-import { getChatSocket, getNotificationsSocket } from '../../app/supabase';
+import { getChatSocket, getNotificationsSocket } from '../../app/realtime';
 import { Message } from '../../app/datamodels';
 import { useAuth } from '../../hooks/useAuth';
 import {

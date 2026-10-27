@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getAccessToken } from '../app/authStorage';
-import { supabase } from '../app/supabase';
+import { refreshAccessToken } from '../app/services/api.service';
 import { fetchCurrentUser } from '../app/services/user.service';
 
 /** Matches the subset of user fields stored in localStorage by login/OAuth flows. */
@@ -13,6 +13,15 @@ export type TalkieUser = {
   appRole?: string;
 };
 
+function getStoredUser(): TalkieUser | null {
+  try {
+    const value = localStorage.getItem('user');
+    return value ? (JSON.parse(value) as TalkieUser) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function useAuth(): TalkieUser | null {
   const [user, setUser] = useState<TalkieUser | null>(null);
 
@@ -23,7 +32,7 @@ export function useAuth(): TalkieUser | null {
       const hasToken = Boolean(getAccessToken());
 
       if (hasToken) {
-        await supabase.auth.refresh();
+        await refreshAccessToken().catch(() => null);
 
         try {
           const me = await fetchCurrentUser();
@@ -55,7 +64,7 @@ export function useAuth(): TalkieUser | null {
       }
 
       if (isMounted) {
-        setUser(supabase.auth.user() as TalkieUser | null);
+        setUser(getStoredUser());
       }
     }
 

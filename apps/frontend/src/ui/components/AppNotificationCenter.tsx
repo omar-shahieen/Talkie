@@ -20,7 +20,7 @@ import {
 } from '@chakra-ui/react';
 import { BellIcon } from '@chakra-ui/icons';
 import { useThemedColors } from '../theme/colors';
-import { getNotificationsSocket } from '../../app/supabase';
+import { getNotificationsSocket } from '../../app/realtime';
 import {
   fetchNotifications,
   markNotificationAsRead,
