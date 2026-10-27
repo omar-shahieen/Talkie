@@ -124,7 +124,12 @@
       "/node_modules/(?!(nanoid|@scure|@noble|otplib)/)"
     ],
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.(t|j)s",
+      "!main.ts",
+      "!worker.ts",
+      "!**/*.module.ts",
+      "!**/*.dto.ts",
+      "!**/*.spec.ts"
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
