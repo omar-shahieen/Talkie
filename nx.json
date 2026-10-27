@@ -3,44 +3,48 @@
   "defaultBase": "main",
   "targetDefaults": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "outputs": [
-        "{projectRoot}/dist"
-      ],
+      "dependsOn": ["^build"],
+      "outputs": ["{projectRoot}/dist"],
       "cache": true
     },
     "test": {
-      "inputs": [
-        "default",
-        "^production"
-      ],
+      "inputs": ["default", "^production"],
       "cache": true
     },
     "lint": {
-      "inputs": [
-        "default"
-      ],
+      "inputs": ["default"],
+      "cache": true
+    },
+    "typecheck": {
+      "inputs": ["default", "^production"],
       "cache": true
     },
     "dev": {
-      "continuous": true
+      "continuous": true,
+      "cache": false
     },
-    "start:dev": {
-      "continuous": true
+    "dev:*": {
+      "continuous": true,
+      "cache": false
+    },
+    "start:*": {
+      "dependsOn": ["build"],
+      "continuous": true,
+      "cache": false
+    },
+    "start": {
+      "dependsOn": ["build"],
+      "continuous": true,
+      "cache": false
     }
   },
   "namedInputs": {
-    "default": [
-      "{projectRoot}/**/*"
-    ],
+    "default": ["{projectRoot}/**/*"],
     "production": [
       "default",
       "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
       "!{projectRoot}/tsconfig.spec.json",
       "!{projectRoot}/jest.config.[jt]s"
     ]
-  },
-  "analytics": true
+  }
 }
