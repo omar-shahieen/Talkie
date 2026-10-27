@@ -86,13 +86,12 @@ function getRedisUrl(config: ConfigService): string {
         type: 'postgres',
         url: getDatabaseUrl(config),
         autoLoadEntities: true,
-        entities: [__dirname + '/**/entity/*{.js,.ts}'],
+        entities: [__dirname + '/**/*.entity{.ts,.js}'],
         subscribers: [__dirname + '/**/*.subscriber{.ts,.js}'],
         synchronize:
-          (config.get<string>('DB_SYNC') ??
-            (config.get<string>('NODE_ENV') === 'production'
-              ? 'false'
-              : 'true')) === 'true',
+          (config.get<string>('NODE_ENV') === 'production'
+            ? 'false'
+            : 'true') === 'true',
 
         // logging: true,
       }),
@@ -152,7 +151,6 @@ function getRedisUrl(config: ConfigService): string {
 
     // GLOBAL MODULES
     AuthModule,
-    EventsModule,
     AccessControlModule,
     AuditModule,
     LoggingModule,

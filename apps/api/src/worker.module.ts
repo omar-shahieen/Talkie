@@ -3,7 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bullmq';
 import { ClsModule } from 'nestjs-cls';
-
+import { EventsModule } from './events/events.module';
 import { redisOptionsFromUrl } from './common/config/redis-url';
 import { LoggingModule } from './logging/logging.module';
 import { MailModule } from './mail/mail.module';
@@ -12,10 +12,16 @@ import { AuditModule } from './audit/audit.module';
 import { AuditWorker } from './audit/auditLogger.worker';
 import { MessagesModule } from './messages/messages.module';
 import { MessageRetentionConsumer } from './messages/message-retention.queue';
+import { AuthModule } from './auth/auth.module';
+import { CacheModule } from '@nestjs/cache-manager';
+import { createKeyv } from '@keyv/redis';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env', 'apps/api/.env', '../apps/api/.env'],
+    }),
 
     ClsModule.forRoot({
       global: true,
@@ -24,6 +30,15 @@ import { MessageRetentionConsumer } from './messages/message-retention.queue';
       },
     }),
 
+    CacheModule.registerAsync({
+      isGlobal: true,
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        stores: [createKeyv(config.getOrThrow<string>('REDIS_URL'))],
+        ttl: config.get<number>('CACHE_TTL', 5000), // in milliseconds
+      }),
+    }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -31,13 +46,9 @@ import { MessageRetentionConsumer } from './messages/message-retention.queue';
         type: 'postgres',
         url: config.getOrThrow<string>('DATABASE_URL'),
         autoLoadEntities: true,
-        entities: [__dirname + '/**/entity/*{.js,.ts}'],
+        entities: [__dirname + '/**/*.entity{.ts,.js}'],
         subscribers: [__dirname + '/**/*.subscriber{.ts,.js}'],
-        synchronize:
-          (config.get<string>('DB_SYNC') ??
-            (config.get<string>('NODE_ENV') === 'production'
-              ? 'false'
-              : 'true')) === 'true',
+        synchronize: false,
       }),
     }),
 
@@ -58,11 +69,12 @@ import { MessageRetentionConsumer } from './messages/message-retention.queue';
         },
       }),
     }),
-
+    AuthModule,
     LoggingModule,
     MailModule,
     AuditModule,
     MessagesModule,
+    EventsModule,
   ],
   providers: [AuditWorker, MailWorker, MessageRetentionConsumer],
 })

@@ -17,7 +17,7 @@ import {
   WebSocketServer,
   WsException,
 } from '@nestjs/websockets';
-import { Socket, Server, Namespace } from 'socket.io';
+import { Socket, Namespace } from 'socket.io';
 import { type AuthenticatedSocket } from '../auth/types/authenticated-socket.type';
 
 import { UsersService } from '../users/users.service';
