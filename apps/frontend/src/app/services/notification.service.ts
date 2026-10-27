@@ -17,7 +17,8 @@ function normalizeNotification(record: ApiNotification): NotificationRecord {
     title: record.title || 'Notification',
     content: record.content || record.message || '',
     isRead: Boolean(record.isRead || record.read),
-    created_at: record.created_at || record.createdAt || new Date().toISOString(),
+    created_at:
+      record.created_at || record.createdAt || new Date().toISOString(),
     link: record.link,
   };
 }

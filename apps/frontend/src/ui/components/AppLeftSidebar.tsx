@@ -24,7 +24,7 @@ import {
   useDisclosure,
 } from '@chakra-ui/react';
 import React, { useState } from 'react';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import { getChatSocket, supabase } from '../../app/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { OTHER_REDIRECT_ROUTE } from '../../routes/defaultRoute';
@@ -65,7 +65,7 @@ export default function AppLeftSidebar() {
 
 function AppLeftSidebarTopbar() {
   const colors = useThemedColors();
-  const history = useHistory();
+  const navigate = useNavigate();
   const user = useAuth();
 
   return (
@@ -97,8 +97,8 @@ function AppLeftSidebarTopbar() {
         <MenuList>
           {!user ? (
             <>
-              <MenuItem onClick={() => history.push('/login')}>Sign In</MenuItem>
-              <MenuItem onClick={() => history.push('/login?mode=signup')}>
+              <MenuItem onClick={() => navigate('/login')}>Sign In</MenuItem>
+              <MenuItem onClick={() => navigate('/login?mode=signup')}>
                 Sign Up
               </MenuItem>
             </>
@@ -106,7 +106,7 @@ function AppLeftSidebarTopbar() {
             <MenuItem
               onClick={async () => {
                 await supabase.auth.signOut();
-                history.replace('/login');
+                navigate('/login', { replace: true });
                 window.location.reload();
               }}
             >
@@ -122,7 +122,7 @@ function AppLeftSidebarTopbar() {
 function BottomSection() {
   const colors = useThemedColors();
   const user = useAuth();
-  const history = useHistory();
+  const navigate = useNavigate();
   const {
     isOpen: isInfoOpen,
     onOpen: onInfoOpen,
@@ -133,11 +133,11 @@ function BottomSection() {
   >('online');
 
   function toSettingsView() {
-    history.push('/settings');
+    navigate('/settings');
   }
 
   function toOther() {
-    history.push(OTHER_REDIRECT_ROUTE);
+    navigate(OTHER_REDIRECT_ROUTE);
   }
 
   async function logout() {
@@ -147,7 +147,7 @@ function BottomSection() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
 
-    history.replace('/login');
+    navigate('/login', { replace: true });
     window.location.reload();
   }
 

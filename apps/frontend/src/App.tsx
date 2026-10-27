@@ -10,14 +10,14 @@ import {
   ModalHeader,
   ModalOverlay,
   useDisclosure,
-} from "@chakra-ui/react";
-import AppRouteProvider from "./routes/AppRouteProvider";
-import React, { useEffect } from "react";
-import "./App.css";
-import "@fontsource/sora";
+} from '@chakra-ui/react';
+import AppRouteProvider from './routes/AppRouteProvider';
+import React, { useEffect } from 'react';
+import './App.css';
+import '@fontsource/sora';
 
 const config = {
-  initialColorMode: "dark" as const,
+  initialColorMode: 'dark' as const,
   useSystemColorMode: false,
 };
 
@@ -29,35 +29,35 @@ const theme = extendTheme({
   },
   colors: {
     light: {
-      bg: "#ffffff",
-      text: "#000000",
-      border: "#e0e0e0",
-      hover: "#f5f5f5",
+      bg: '#ffffff',
+      text: '#000000',
+      border: '#e0e0e0',
+      hover: '#f5f5f5',
     },
     dark: {
-      bg: "#1a1a1a",
-      text: "#ffffff",
-      border: "#333333",
-      hover: "#2a2a2a",
+      bg: '#1a1a1a',
+      text: '#ffffff',
+      border: '#333333',
+      hover: '#2a2a2a',
     },
   },
   semanticTokens: {
     colors: {
-      "bg-primary": {
-        light: "#ffffff",
-        dark: "#1a1a1a",
+      'bg-primary': {
+        light: '#ffffff',
+        dark: '#1a1a1a',
       },
-      "bg-secondary": {
-        light: "#f5f5f5",
-        dark: "#2a2a2a",
+      'bg-secondary': {
+        light: '#f5f5f5',
+        dark: '#2a2a2a',
       },
-      "text-primary": {
-        light: "#000000",
-        dark: "#ffffff",
+      'text-primary': {
+        light: '#000000',
+        dark: '#ffffff',
       },
-      "border-color": {
-        light: "#e0e0e0",
-        dark: "#333333",
+      'border-color': {
+        light: '#e0e0e0',
+        dark: '#333333',
       },
     },
   },
@@ -65,20 +65,20 @@ const theme = extendTheme({
     global: {
       body: {
         _light: {
-          bg: "#ffffff",
-          color: "#000000",
+          bg: '#ffffff',
+          color: '#000000',
         },
         _dark: {
-          bg: "#1a1a1a",
-          color: "#ffffff",
+          bg: '#1a1a1a',
+          color: '#ffffff',
         },
       },
-      "html, body": {
+      'html, body': {
         _light: {
-          bg: "#ffffff",
+          bg: '#ffffff',
         },
         _dark: {
-          bg: "#1a1a1a",
+          bg: '#1a1a1a',
         },
       },
     },

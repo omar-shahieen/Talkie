@@ -2,10 +2,10 @@ import {
   clearAccessToken,
   getAccessToken,
   setAccessToken,
-} from "../authStorage";
+} from '../authStorage';
 
 // Default API URL. In development the api runs on port 3000.
-export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export class ApiError extends Error {
   status: number;
@@ -13,7 +13,7 @@ export class ApiError extends Error {
 
   constructor(message: string, status: number, details: unknown = null) {
     super(message);
-    this.name = "ApiError";
+    this.name = 'ApiError';
     this.status = status;
     this.details = details;
   }
@@ -34,7 +34,7 @@ type ApiSuccessEnvelope = {
   results?: unknown;
 };
 
-function appendQuery(url: URL, query?: RequestOptions["query"]): URL {
+function appendQuery(url: URL, query?: RequestOptions['query']): URL {
   if (!query) {
     return url;
   }
@@ -52,36 +52,36 @@ function appendQuery(url: URL, query?: RequestOptions["query"]): URL {
 
 export function buildApiUrl(
   path: string,
-  query?: RequestOptions["query"],
+  query?: RequestOptions['query'],
 ): string {
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   const url = new URL(`${API_URL}${normalizedPath}`);
   return appendQuery(url, query).toString();
 }
 
 export function normalizeBlobUrl(url?: string | null): string {
   if (!url) {
-    return "";
+    return '';
   }
 
-  return url.replace(/\/image\/blob/gi, "/file/blob");
+  return url.replace(/\/image\/blob/gi, '/file/blob');
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 function formatApiFailureMessage(payload: unknown, fallback: string): string {
-  if (payload && typeof payload === "object" && "errors" in payload) {
+  if (payload && typeof payload === 'object' && 'errors' in payload) {
     const errors = (payload as { errors?: Record<string, string[]> }).errors;
-    if (errors && typeof errors === "object") {
+    if (errors && typeof errors === 'object') {
       const parts = Object.entries(errors).flatMap(([key, msgs]) =>
         Array.isArray(msgs)
           ? msgs.map((m) => `${key}: ${m}`)
           : [`${key}: ${String(msgs)}`],
       );
       if (parts.length) {
-        return parts.join("; ");
+        return parts.join('; ');
       }
     }
   }
@@ -110,9 +110,9 @@ function normalizeNumericRecord(value: Record<string, unknown>) {
 
   if (
     orderedValues.length > 0 &&
-    orderedValues.every((item) => typeof item === "string" && item.length <= 1)
+    orderedValues.every((item) => typeof item === 'string' && item.length <= 1)
   ) {
-    return orderedValues.join("");
+    return orderedValues.join('');
   }
 
   return orderedValues;
@@ -121,8 +121,8 @@ function normalizeNumericRecord(value: Record<string, unknown>) {
 export function unwrapApiPayload<T = unknown>(payload: unknown): T {
   if (
     !isRecord(payload) ||
-    !("success" in payload) ||
-    !("results" in payload)
+    !('success' in payload) ||
+    !('results' in payload)
   ) {
     return payload as T;
   }
@@ -177,9 +177,9 @@ async function parseResponse(response: Response) {
 
 async function refreshAccessToken(): Promise<string | null> {
   try {
-    const response = await fetch(buildApiUrl("/auth/refresh"), {
-      method: "POST",
-      credentials: "include",
+    const response = await fetch(buildApiUrl('/auth/refresh'), {
+      method: 'POST',
+      credentials: 'include',
     });
 
     const payload = await parseResponse(response);
@@ -214,26 +214,26 @@ async function requestJsonInternal<T>(
   hasRetriedAfterRefresh: boolean,
 ): Promise<T> {
   const {
-    method = "GET",
+    method = 'GET',
     query,
     headers = {},
     body,
     token,
-    credentials = "include",
+    credentials = 'include',
   } = options;
 
   const requestHeaders = { ...headers };
   const authToken = token ?? getAuthToken();
   const hasFormDataBody =
-    typeof FormData !== "undefined" && body instanceof FormData;
+    typeof FormData !== 'undefined' && body instanceof FormData;
 
   if (authToken) {
     requestHeaders.Authorization = `Bearer ${authToken}`;
   }
 
   if (body !== undefined && body !== null && !hasFormDataBody) {
-    requestHeaders["Content-Type"] =
-      requestHeaders["Content-Type"] || "application/json";
+    requestHeaders['Content-Type'] =
+      requestHeaders['Content-Type'] || 'application/json';
   }
 
   const response = await fetch(buildApiUrl(path, query), {
@@ -255,9 +255,9 @@ async function requestJsonInternal<T>(
       response.status === 401 &&
       !hasRetriedAfterRefresh &&
       token === undefined &&
-      path !== "/auth/login" &&
-      path !== "/auth/refresh" &&
-      path !== "/auth/tfa/verify";
+      path !== '/auth/login' &&
+      path !== '/auth/refresh' &&
+      path !== '/auth/tfa/verify';
 
     if (canRefresh) {
       const refreshedToken = await refreshAccessToken();
@@ -268,7 +268,7 @@ async function requestJsonInternal<T>(
 
     const message = formatApiFailureMessage(
       payload,
-      response.statusText || "Request failed",
+      response.statusText || 'Request failed',
     );
     throw new ApiError(message, response.status, payload);
   }

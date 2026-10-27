@@ -1,12 +1,11 @@
 import React, { useEffect } from 'react';
-import { useParams } from 'react-router';
-import { Route, Switch } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { supabase } from '../../app/supabase';
 import AppChatContainer from '../components/AppChatContainer';
 import { acknowledgeChannel } from '../../app/services/channel.service';
 
 function IndexView() {
-  const { serverId, channelId } = useParams<{
+  const { serverId = '', channelId = '' } = useParams<{
     serverId: string;
     channelId: string;
   }>();
@@ -40,13 +39,13 @@ function IndexView() {
     };
   }, [channelId]);
 
+  if (!serverId || !channelId) {
+    return null;
+  }
+
   return (
     <>
-      <Switch>
-        <Route path="/">
-          <AppChatContainer serverId={serverId} channelId={channelId} />
-        </Route>
-      </Switch>
+      <AppChatContainer serverId={serverId} channelId={channelId} />
     </>
   );
 }

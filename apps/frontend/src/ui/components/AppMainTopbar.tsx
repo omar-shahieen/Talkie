@@ -27,7 +27,7 @@ import {
   useToast,
 } from '@chakra-ui/react';
 import React, { useState } from 'react';
-import { useHistory, useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useThemedColors } from '../theme/colors';
 import AppIconButton from './AppIconButton';
 import AppNotificationCenter from './AppNotificationCenter';
@@ -58,7 +58,7 @@ export default function AppMainTopbar() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchTotal, setSearchTotal] = useState<number | null>(null);
   const { colorMode, toggleColorMode } = useColorMode();
-  const history = useHistory();
+  const navigate = useNavigate();
   const toast = useToast();
   const params = useParams<{ serverId?: string; channelId?: string }>();
 
@@ -99,7 +99,7 @@ export default function AppMainTopbar() {
 
   function handleResultClick(result: SearchResult) {
     if (params.serverId && (result.channelId ?? result.channel_id)) {
-      history.push(
+      navigate(
         `/servers/${params.serverId}/channels/${result.channelId ?? result.channel_id}`,
       );
     }

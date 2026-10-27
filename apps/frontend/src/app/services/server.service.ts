@@ -82,12 +82,15 @@ export async function createServerInvitation(
   serverId: string,
   expiresInHours?: number,
 ): Promise<ServerInvitationPayload | string> {
-  return requestJson<ServerInvitationPayload | string>(`/servers/${serverId}/invitation`, {
-    method: 'POST',
-    body: {
-      expiresInHours,
+  return requestJson<ServerInvitationPayload | string>(
+    `/servers/${serverId}/invitation`,
+    {
+      method: 'POST',
+      body: {
+        expiresInHours,
+      },
     },
-  });
+  );
 }
 
 export async function fetchServerInvitations(

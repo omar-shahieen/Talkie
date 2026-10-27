@@ -78,7 +78,8 @@ export default function AppNotificationCenter({
         title: payload.title || 'New Notification',
         content: payload.content || payload.message || '',
         isRead: false,
-        created_at: payload.created_at || payload.createdAt || new Date().toISOString(),
+        created_at:
+          payload.created_at || payload.createdAt || new Date().toISOString(),
         link: payload.link,
       };
 
@@ -107,7 +108,8 @@ export default function AppNotificationCenter({
         title: payload.title || 'New Notification',
         content: payload.content || payload.message || '',
         isRead: false,
-        created_at: payload.created_at || payload.createdAt || new Date().toISOString(),
+        created_at:
+          payload.created_at || payload.createdAt || new Date().toISOString(),
         link: payload.link,
       };
 

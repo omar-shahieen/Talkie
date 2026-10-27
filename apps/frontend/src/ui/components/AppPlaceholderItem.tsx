@@ -1,6 +1,6 @@
-import { Avatar, Box } from "@chakra-ui/react";
-import React from "react";
-import { useThemedColors } from "../theme/colors";
+import { Avatar, Box } from '@chakra-ui/react';
+import React from 'react';
+import { useThemedColors } from '../theme/colors';
 
 export default function AppPlaceholderItem() {
   const colors = useThemedColors();

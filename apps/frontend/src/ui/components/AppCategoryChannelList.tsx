@@ -1,7 +1,7 @@
 import { ChevronRightIcon } from '@chakra-ui/icons';
 import { Box, Text } from '@chakra-ui/react';
 import React, { useEffect, useState } from 'react';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import AppChannelListItem from './AppChannelListItem';
 import { fetchVisibleChannelsByServer } from '../../app/services/channel.service';
 import { useAuth } from '../../hooks/useAuth';
@@ -18,7 +18,7 @@ export default function AppCategoryChannelList({
   const colors = useThemedColors();
   const [channels, setChannels] = useState<any[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
-  const history = useHistory();
+  const navigate = useNavigate();
   const user = useAuth();
 
   useEffect(() => {
@@ -57,13 +57,18 @@ export default function AppCategoryChannelList({
 
   const handleChannelClick = (channelId: string) => {
     if (server?.id && channelId) {
-      history.push(`/servers/${server.id}/channels/${channelId}`);
+      navigate(`/servers/${server.id}/channels/${channelId}`);
     }
   };
 
   return (
     <Box marginY="5px">
-      <Text color={colors.white} fontSize="xs" fontWeight="bold" marginBottom="5px">
+      <Text
+        color={colors.white}
+        fontSize="xs"
+        fontWeight="bold"
+        marginBottom="5px"
+      >
         <ChevronRightIcon /> {serverName.toUpperCase()}
       </Text>
       {errorMessage ? (

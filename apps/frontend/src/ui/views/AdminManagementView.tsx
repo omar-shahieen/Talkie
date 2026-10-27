@@ -31,10 +31,7 @@ import {
   resolveAppAccess,
   resolveServerAccess,
 } from '../../app/services/access-control.service';
-import {
-  fetchCurrentUser,
-  UserPayload,
-} from '../../app/services/user.service';
+import { fetchCurrentUser, UserPayload } from '../../app/services/user.service';
 
 const PERMISSIONS: Array<{ key: string; value: number }> = [
   { key: 'ViewChannel', value: Math.pow(2, 0) },
@@ -238,7 +235,9 @@ export default function AdminManagementView() {
       setAccessCheckResult(data?.message || 'App access resolved.');
     } catch (error) {
       setAccessCheckResult(
-        error instanceof Error ? error.message : 'Unable to resolve app access.',
+        error instanceof Error
+          ? error.message
+          : 'Unable to resolve app access.',
       );
     } finally {
       setIsCheckingAccess(false);
@@ -271,7 +270,12 @@ export default function AdminManagementView() {
 
   if (isLoadingUser) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minH="200px">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minH="200px"
+      >
         <Spinner />
       </Box>
     );
@@ -302,7 +306,12 @@ export default function AdminManagementView() {
         Manage roles, permissions, and access-control checks.
       </Text>
 
-      <Box marginBottom="24px" padding="14px" border="1px solid #3d3d3d" borderRadius="10px">
+      <Box
+        marginBottom="24px"
+        padding="14px"
+        border="1px solid #3d3d3d"
+        borderRadius="10px"
+      >
         <Text fontSize="lg" fontWeight="bold" marginBottom="10px">
           Roles & Permissions
         </Text>
@@ -424,7 +433,9 @@ export default function AdminManagementView() {
                       {isEditing ? (
                         <Input
                           value={editPosition}
-                          onChange={(event) => setEditPosition(event.target.value)}
+                          onChange={(event) =>
+                            setEditPosition(event.target.value)
+                          }
                           size="sm"
                           type="number"
                           maxW="90px"
@@ -440,7 +451,9 @@ export default function AdminManagementView() {
                             <Checkbox
                               key={`${role.id}-${permission.key}`}
                               size="sm"
-                              isChecked={editPermissions.includes(permission.key)}
+                              isChecked={editPermissions.includes(
+                                permission.key,
+                              )}
                               onChange={(event) => {
                                 setEditPermissions((current) =>
                                   event.target.checked
@@ -456,7 +469,8 @@ export default function AdminManagementView() {
                           ))}
                         </VStack>
                       ) : (
-                        fromPermissionString(role.permissions).join(', ') || 'None'
+                        fromPermissionString(role.permissions).join(', ') ||
+                        'None'
                       )}
                     </Td>
                     <Td>
@@ -553,7 +567,9 @@ export default function AdminManagementView() {
         {accessCheckResult ? (
           <Text color="yellow.300">{accessCheckResult}</Text>
         ) : (
-          <Text color="whiteAlpha.600">Run a check to see access response.</Text>
+          <Text color="whiteAlpha.600">
+            Run a check to see access response.
+          </Text>
         )}
       </Box>
     </Box>

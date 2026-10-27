@@ -1,9 +1,9 @@
-import React from "react";
-import { Box } from "@chakra-ui/react";
+import React from 'react';
+import { Box } from '@chakra-ui/react';
 
-import AppLeftSidebar from "../components/AppLeftSidebar";
-import AppMainContent from "../components/AppMainContent";
-import AppMainSidebar from "../components/AppMainSidebar";
+import AppLeftSidebar from '../components/AppLeftSidebar';
+import AppMainContent from '../components/AppMainContent';
+import AppMainSidebar from '../components/AppMainSidebar';
 
 type Props = {
   children: React.ReactNode;

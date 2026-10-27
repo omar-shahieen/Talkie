@@ -1,9 +1,9 @@
-import { CloseIcon } from "@chakra-ui/icons";
-import { Box, Divider, Link, Text, IconButton } from "@chakra-ui/react";
-import React from "react";
-import { Link as RouterLink, useHistory } from "react-router-dom";
-import { useThemedColors } from "../theme/colors";
-import { supabase } from "../../app/supabase";
+import { CloseIcon } from '@chakra-ui/icons';
+import { Box, Divider, Link, Text, IconButton } from '@chakra-ui/react';
+import React from 'react';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { useThemedColors } from '../theme/colors';
+import { supabase } from '../../app/supabase';
 
 export type SettingsLayoutProps = {
   children: React.ReactNode;
@@ -11,7 +11,7 @@ export type SettingsLayoutProps = {
 
 export default function SettingsLayout({ children }: SettingsLayoutProps) {
   const colors = useThemedColors();
-  const history = useHistory();
+  const navigate = useNavigate();
 
   return (
     <Box display="flex" height="100vh">
@@ -33,7 +33,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
             variant="ghost"
             color="gray.400"
             _hover={{ color: colors.dark, backgroundColor: 'whiteAlpha.200' }}
-            onClick={() => history.push('/')}
+            onClick={() => navigate('/')}
           />
         </Box>
         {children}
@@ -44,7 +44,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
 
 function SettingsLeftSidebar() {
   const colors = useThemedColors();
-  const history = useHistory();
+  const navigate = useNavigate();
   return (
     <Box
       flex="1"
@@ -57,14 +57,18 @@ function SettingsLeftSidebar() {
       paddingX="15px"
       overflow="hidden"
       _hover={{
-        overflowY: "scroll",
+        overflowY: 'scroll',
       }}
     >
       <Box display="flex" flexDirection="column">
         <SettingsListHeader>User Settings</SettingsListHeader>
 
         <SettingsListItem label="My Account" active />
-        <Link as={RouterLink} to="/settings/admin" _hover={{ textDecoration: 'none' }}>
+        <Link
+          as={RouterLink}
+          to="/settings/admin"
+          _hover={{ textDecoration: 'none' }}
+        >
           <SettingsListItem label="Admin Management" />
         </Link>
 
@@ -75,7 +79,7 @@ function SettingsLeftSidebar() {
           hoverBackgroundColor="red.900"
           onClick={async () => {
             await supabase.auth.signOut();
-            history.replace('/login');
+            navigate('/login', { replace: true });
             window.location.reload();
           }}
         >
@@ -113,8 +117,8 @@ function SettingsListItem({
       marginY="2px"
       borderRadius="sm"
       cursor="pointer"
-      color={!!color ? color : active ? colors.dark : "whiteAlpha.500"}
-      backgroundColor={active ? colors.lightGray : "transparent"}
+      color={!!color ? color : active ? colors.dark : 'whiteAlpha.500'}
+      backgroundColor={active ? colors.lightGray : 'transparent'}
       _hover={{
         backgroundColor: !!hoverBackgroundColor
           ? hoverBackgroundColor

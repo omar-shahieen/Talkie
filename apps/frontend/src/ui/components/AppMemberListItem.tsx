@@ -1,7 +1,7 @@
-import { Avatar, Box, Text, Tooltip } from "@chakra-ui/react";
-import React from "react";
+import { Avatar, Box, Text, Tooltip } from '@chakra-ui/react';
+import React from 'react';
 
-import { useThemedColors } from "../theme/colors";
+import { useThemedColors } from '../theme/colors';
 
 export type AppMemberListItemProps = {
   name: string;

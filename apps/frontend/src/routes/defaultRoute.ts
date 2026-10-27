@@ -37,7 +37,7 @@ function getStoredUserId(): string {
   }
 
   const token = getAccessToken();
-  return token ? decodeJwtPayload(token)?.sub ?? '' : '';
+  return token ? (decodeJwtPayload(token)?.sub ?? '') : '';
 }
 
 export async function resolveDefaultRedirectRoute(): Promise<string> {

@@ -1,9 +1,9 @@
-import React from "react";
-import { Box } from "@chakra-ui/react";
-import AppChatContainer from "./AppChatContainer";
-import AppMainTopbar from "./AppMainTopbar";
-import AppRightSidebar from "./AppRightSidebar";
-import { useThemedColors } from "../theme/colors";
+import React from 'react';
+import { Box } from '@chakra-ui/react';
+import AppChatContainer from './AppChatContainer';
+import AppMainTopbar from './AppMainTopbar';
+import AppRightSidebar from './AppRightSidebar';
+import { useThemedColors } from '../theme/colors';
 
 export type AppMainContentProps = {
   children: React.ReactNode;

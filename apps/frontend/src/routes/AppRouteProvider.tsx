@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
   BrowserRouter as Router,
-  Switch,
+  Routes,
   Route,
-  Redirect,
+  Navigate,
 } from 'react-router-dom';
 import AppMainLayout from '../ui/layouts/MainLayout';
 import SettingsLayout from '../ui/layouts/SettingsLayout';
@@ -48,90 +48,77 @@ function DefaultRedirect() {
     };
   }, []);
 
-  return route ? <Redirect to={route} /> : null;
+  return route ? <Navigate to={route} replace /> : null;
 }
 
 function RootEntry() {
   if (!getAccessToken()) {
-    return <Redirect to="/login" />;
+    return <Navigate to="/login" replace />;
   }
 
   return <DefaultRedirect />;
 }
 
+function ProtectedRoute({ children }: { children: React.ReactElement }) {
+  if (!getAccessToken()) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
+function AdminRoute({ children }: { children: React.ReactElement }) {
+  if (!hasAdminRole()) {
+    return <Navigate to="/settings" replace />;
+  }
+  return children;
+}
+
 const AppRouteProvider = () => {
   return (
     <Router>
-      <Switch>
-        <Route path="/reset-password/:path?">
-          <Switch>
-            <Route
-              path="/reset-password/"
-              component={ResetPasswordView}
-              exact
-            />
-
-            <Route path="*" component={NotFoundView}></Route>
-          </Switch>
-        </Route>
-
-        <Route path="/oauth" component={OAuthCallbackView} exact />
-
-        <Route path="/login" component={LoginView} exact />
-
-        <Route path="/" component={RootEntry} exact />
+      <Routes>
+        <Route path="/reset-password" element={<ResetPasswordView />} />
+        <Route path="/oauth" element={<OAuthCallbackView />} />
+        <Route path="/login" element={<LoginView />} />
+        <Route path="/" element={<RootEntry />} />
 
         <Route
-          path="/servers/:path?"
-          render={() =>
-            !getAccessToken() ? (
-              <Redirect to="/login" />
-            ) : (
-              <Switch>
-                <AppMainLayout>
-                  <Route
-                    path="/servers/:serverId/channels/:channelId"
-                    component={IndexView}
-                    exact
-                  />
-                </AppMainLayout>
-
-                <Route path="*" component={NotFoundView} />
-              </Switch>
-            )
+          path="/servers/:serverId/channels/:channelId"
+          element={
+            <ProtectedRoute>
+              <AppMainLayout>
+                <IndexView />
+              </AppMainLayout>
+            </ProtectedRoute>
           }
         />
 
         <Route
-          path="/settings/:path?"
-          render={() =>
-            !getAccessToken() ? (
-              <Redirect to="/login" />
-            ) : (
-              <Switch>
-                <SettingsLayout>
-                  <Route path="/settings/" component={SettingsView} exact />
-                  <Route
-                    path="/settings/admin"
-                    render={() =>
-                      hasAdminRole() ? (
-                        <AdminManagementView />
-                      ) : (
-                        <Redirect to="/settings/" />
-                      )
-                    }
-                    exact
-                  />
-                </SettingsLayout>
-
-                <Route path="*" component={NotFoundView} />
-              </Switch>
-            )
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsLayout>
+                <SettingsView />
+              </SettingsLayout>
+            </ProtectedRoute>
           }
         />
 
-        <Route path="*" component={NotFoundView}></Route>
-      </Switch>
+        <Route
+          path="/settings/admin"
+          element={
+            <ProtectedRoute>
+              <SettingsLayout>
+                <AdminRoute>
+                  <AdminManagementView />
+                </AdminRoute>
+              </SettingsLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="*" element={<NotFoundView />} />
+      </Routes>
     </Router>
   );
 };

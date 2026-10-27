@@ -12,7 +12,7 @@ import {
   VStack,
 } from '@chakra-ui/react';
 import React, { useEffect, useState } from 'react';
-import { Redirect, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { getAccessToken } from '../../app/authStorage';
 import {
   getGoogleAuthUrl,
@@ -91,7 +91,7 @@ export default function LoginView() {
   }, []);
 
   if (postLoginRoute) {
-    return <Redirect to={postLoginRoute} />;
+    return <Navigate to={postLoginRoute} replace />;
   }
 
   function loginWithGoogle() {
@@ -211,7 +211,14 @@ export default function LoginView() {
   }
 
   async function submitSignup() {
-    if (!firstName || !lastName || !username || !email || !password || !passwordConfirm) {
+    if (
+      !firstName ||
+      !lastName ||
+      !username ||
+      !email ||
+      !password ||
+      !passwordConfirm
+    ) {
       toast({
         title: 'Missing fields',
         description: 'Fill in all fields to create an account.',
@@ -322,7 +329,12 @@ export default function LoginView() {
         color={colors.white}
         boxShadow="xl"
       >
-        <Box display="flex" flexDirection="column" alignItems="center" marginBottom="14px">
+        <Box
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          marginBottom="14px"
+        >
           <Image
             src="/talkie-logo.png"
             alt="Talkie logo"
@@ -335,7 +347,9 @@ export default function LoginView() {
             Talkie
           </Heading>
           <Text color={colors.textDim} fontSize="sm" textAlign="center">
-            {authMode === 'signin' ? 'Sign in to continue' : 'Create an account'}
+            {authMode === 'signin'
+              ? 'Sign in to continue'
+              : 'Create an account'}
           </Text>
         </Box>
 

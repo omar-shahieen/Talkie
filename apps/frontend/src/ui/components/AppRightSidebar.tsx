@@ -1,7 +1,7 @@
-import { Box } from "@chakra-ui/react";
-import React from "react";
-import { useThemedColors } from "../theme/colors";
-import AppMemberList from "./AppMemberList";
+import { Box } from '@chakra-ui/react';
+import React from 'react';
+import { useThemedColors } from '../theme/colors';
+import AppMemberList from './AppMemberList';
 
 export default function AppRightSidebar() {
   const colors = useThemedColors();

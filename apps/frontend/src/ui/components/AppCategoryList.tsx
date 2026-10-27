@@ -36,7 +36,9 @@ export default function AppCategoryList() {
           : await discoverPublicServers({ limit: 20 });
 
         const fallbackData =
-          Array.isArray(data) && data.length === 0 ? await fetchServers() : data;
+          Array.isArray(data) && data.length === 0
+            ? await fetchServers()
+            : data;
 
         if (isMounted) {
           setServers(Array.isArray(fallbackData) ? fallbackData : []);

@@ -1,5 +1,5 @@
-import React from "react"
+import React from 'react';
 
 export default function NotFoundView() {
-  return <h1>Not Found</h1>
+  return <h1>Not Found</h1>;
 }

@@ -38,10 +38,7 @@ export function useUserPresence(userId: string | undefined) {
         const updated = {
           userId,
           status: (payload.status || 'offline') as
-            | 'online'
-            | 'idle'
-            | 'dnd'
-            | 'offline',
+            'online' | 'idle' | 'dnd' | 'offline',
           lastSeen: payload.lastSeen || new Date().toISOString(),
         };
         presenceCache[userId] = updated;
@@ -78,10 +75,7 @@ export function useAllPresence() {
         [payload.userId]: {
           userId: payload.userId,
           status: (payload.status || 'offline') as
-            | 'online'
-            | 'idle'
-            | 'dnd'
-            | 'offline',
+            'online' | 'idle' | 'dnd' | 'offline',
           lastSeen: payload.lastSeen || new Date().toISOString(),
         },
       }));

@@ -258,7 +258,9 @@ export default function AppChatInput({
           ariaLabel="Send message"
           icon={<ArrowForwardIcon />}
           onClick={handleSend}
-          disabled={isLoading || (!message.trim() && !uploadedAttachments?.length)}
+          disabled={
+            isLoading || (!message.trim() && !uploadedAttachments?.length)
+          }
           colorScheme="blue"
         />
         <AppIconButton ariaLabel="Select emoji" icon={<AtSignIcon />} />

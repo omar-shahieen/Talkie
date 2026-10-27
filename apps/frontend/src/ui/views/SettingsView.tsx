@@ -38,10 +38,7 @@ import {
   acceptInvitation,
   resolveInvitation,
 } from '../../app/services/invitation.service';
-import {
-  searchUsers,
-  UserPayload,
-} from '../../app/services/user.service';
+import { searchUsers, UserPayload } from '../../app/services/user.service';
 
 function SettingsView() {
   const [servers, setServers] = useState<any[] | null>([]);
@@ -67,7 +64,9 @@ function SettingsView() {
   const [outgoingRequests, setOutgoingRequests] = useState<any[] | null>([]);
   const [friends, setFriends] = useState<any[] | null>([]);
   const [friendSearchQuery, setFriendSearchQuery] = useState('');
-  const [friendSearchResults, setFriendSearchResults] = useState<UserPayload[]>([]);
+  const [friendSearchResults, setFriendSearchResults] = useState<UserPayload[]>(
+    [],
+  );
   const [selectedFriendUser, setSelectedFriendUser] =
     useState<UserPayload | null>(null);
   const [isSearchingFriends, setIsSearchingFriends] = useState(false);
@@ -144,9 +143,9 @@ function SettingsView() {
           outgoingData,
           friendsData,
         ]) => {
-        setServers(serversData ?? []);
-        setChannels(channelsData ?? []);
-        setNotifications(notificationsData ?? []);
+          setServers(serversData ?? []);
+          setChannels(channelsData ?? []);
+          setNotifications(notificationsData ?? []);
           setIncomingRequests(incomingData ?? []);
           setOutgoingRequests(outgoingData ?? []);
           setFriends(friendsData ?? []);
@@ -447,7 +446,9 @@ function SettingsView() {
   async function removeFriend(friendship: any) {
     const userId = getCurrentUserId();
     const targetId =
-      friendship?.userId1 === userId ? friendship?.userId2 : friendship?.userId1;
+      friendship?.userId1 === userId
+        ? friendship?.userId2
+        : friendship?.userId1;
 
     if (!targetId) {
       setFriendStatus('Unable to determine friend id.');
@@ -477,7 +478,9 @@ function SettingsView() {
     } catch (error) {
       setInvitationPreview(null);
       setInvitationStatus(
-        error instanceof Error ? error.message : 'Unable to resolve invitation.',
+        error instanceof Error
+          ? error.message
+          : 'Unable to resolve invitation.',
       );
     }
   }
@@ -557,21 +560,45 @@ function SettingsView() {
           placeholder="Current password"
           value={oldPassword}
           onChange={(event) => setOldPassword(event.target.value)}
-          style={{ display: 'block', width: '100%', marginBottom: '8px', color: 'black', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+          style={{
+            display: 'block',
+            width: '100%',
+            marginBottom: '8px',
+            color: 'black',
+            padding: '8px',
+            borderRadius: '4px',
+            border: '1px solid #ccc',
+          }}
         />
         <input
           type="password"
           placeholder="New password"
           value={newPassword}
           onChange={(event) => setNewPassword(event.target.value)}
-          style={{ display: 'block', width: '100%', marginBottom: '8px', color: 'black', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+          style={{
+            display: 'block',
+            width: '100%',
+            marginBottom: '8px',
+            color: 'black',
+            padding: '8px',
+            borderRadius: '4px',
+            border: '1px solid #ccc',
+          }}
         />
         <input
           type="password"
           placeholder="Confirm new password"
           value={newPasswordConfirm}
           onChange={(event) => setNewPasswordConfirm(event.target.value)}
-          style={{ display: 'block', width: '100%', marginBottom: '8px', color: 'black', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+          style={{
+            display: 'block',
+            width: '100%',
+            marginBottom: '8px',
+            color: 'black',
+            padding: '8px',
+            borderRadius: '4px',
+            border: '1px solid #ccc',
+          }}
         />
         <button onClick={changePassword} disabled={isChangingPassword}>
           Update Password
@@ -592,7 +619,15 @@ function SettingsView() {
           placeholder="6-digit TFA code"
           value={tfaToken}
           onChange={(event) => setTfaToken(event.target.value)}
-          style={{ display: 'block', width: '100%', marginBottom: '8px', color: 'black', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+          style={{
+            display: 'block',
+            width: '100%',
+            marginBottom: '8px',
+            color: 'black',
+            padding: '8px',
+            borderRadius: '4px',
+            border: '1px solid #ccc',
+          }}
         />
         <button
           onClick={() => verifyTfa('enable')}
@@ -612,7 +647,15 @@ function SettingsView() {
           placeholder="Server name"
           value={newServerName}
           onChange={(event) => setNewServerName(event.target.value)}
-          style={{ display: 'block', width: '100%', marginBottom: '8px', color: 'black', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+          style={{
+            display: 'block',
+            width: '100%',
+            marginBottom: '8px',
+            color: 'black',
+            padding: '8px',
+            borderRadius: '4px',
+            border: '1px solid #ccc',
+          }}
         />
         <label style={{ display: 'block', marginBottom: '8px' }}>
           <input
@@ -666,14 +709,30 @@ function SettingsView() {
           placeholder="Channel name"
           value={newChannelName}
           onChange={(event) => setNewChannelName(event.target.value)}
-          style={{ display: 'block', width: '100%', marginBottom: '8px', color: 'black', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+          style={{
+            display: 'block',
+            width: '100%',
+            marginBottom: '8px',
+            color: 'black',
+            padding: '8px',
+            borderRadius: '4px',
+            border: '1px solid #ccc',
+          }}
         />
         <input
           type="text"
           placeholder="Server id"
           value={newChannelServerId}
           onChange={(event) => setNewChannelServerId(event.target.value)}
-          style={{ display: 'block', width: '100%', marginBottom: '8px', color: 'black', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+          style={{
+            display: 'block',
+            width: '100%',
+            marginBottom: '8px',
+            color: 'black',
+            padding: '8px',
+            borderRadius: '4px',
+            border: '1px solid #ccc',
+          }}
         />
         <button onClick={createChannel} disabled={isCreatingChannel}>
           Create Channel
@@ -744,7 +803,15 @@ function SettingsView() {
           placeholder="Search by username, name, or email"
           value={friendSearchQuery}
           onChange={(event) => setFriendSearchQuery(event.target.value)}
-          style={{ display: 'block', width: '100%', marginBottom: '8px', color: 'black', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+          style={{
+            display: 'block',
+            width: '100%',
+            marginBottom: '8px',
+            color: 'black',
+            padding: '8px',
+            borderRadius: '4px',
+            border: '1px solid #ccc',
+          }}
         />
         <button
           onClick={performFriendSearch}
@@ -759,13 +826,23 @@ function SettingsView() {
 
         {selectedFriendUser ? (
           <p style={{ marginTop: '8px' }}>
-            Selected: {selectedFriendUser.firstName} {selectedFriendUser.lastName}{' '}
-            ({selectedFriendUser.username || selectedFriendUser.email || selectedFriendUser.id})
+            Selected: {selectedFriendUser.firstName}{' '}
+            {selectedFriendUser.lastName} (
+            {selectedFriendUser.username ||
+              selectedFriendUser.email ||
+              selectedFriendUser.id}
+            )
           </p>
         ) : null}
 
         {(friendSearchResults ?? []).length ? (
-          <div style={{ marginTop: '10px', border: '1px solid #444', borderRadius: '8px' }}>
+          <div
+            style={{
+              marginTop: '10px',
+              border: '1px solid #444',
+              borderRadius: '8px',
+            }}
+          >
             {friendSearchResults.map((user) => (
               <div
                 key={user.id}
@@ -779,7 +856,9 @@ function SettingsView() {
               >
                 <div>
                   <div>
-                    {[user.firstName, user.lastName].filter(Boolean).join(' ') ||
+                    {[user.firstName, user.lastName]
+                      .filter(Boolean)
+                      .join(' ') ||
                       user.username ||
                       'Unknown user'}
                   </div>
@@ -788,7 +867,9 @@ function SettingsView() {
                     {user.email ? `- ${user.email}` : ''}
                   </div>
                 </div>
-                <button onClick={() => setSelectedFriendUser(user)}>Select</button>
+                <button onClick={() => setSelectedFriendUser(user)}>
+                  Select
+                </button>
               </div>
             ))}
           </div>
@@ -829,7 +910,9 @@ function SettingsView() {
         {(friends ?? []).map((friendship) => {
           const userId = getCurrentUserId();
           const friendId =
-            friendship.userId1 === userId ? friendship.userId2 : friendship.userId1;
+            friendship.userId1 === userId
+              ? friendship.userId2
+              : friendship.userId1;
 
           return (
             <div key={`${friendship.userId1}:${friendship.userId2}`}>
@@ -847,7 +930,15 @@ function SettingsView() {
           placeholder="Invite code"
           value={inviteCode}
           onChange={(event) => setInviteCode(event.target.value)}
-          style={{ display: 'block', width: '100%', marginBottom: '8px', color: 'black', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+          style={{
+            display: 'block',
+            width: '100%',
+            marginBottom: '8px',
+            color: 'black',
+            padding: '8px',
+            borderRadius: '4px',
+            border: '1px solid #ccc',
+          }}
         />
         <button onClick={previewInvitation} style={{ marginRight: '8px' }}>
           Resolve
@@ -866,7 +957,15 @@ function SettingsView() {
           placeholder="Server id"
           value={selectedServerForInvite}
           onChange={(event) => setSelectedServerForInvite(event.target.value)}
-          style={{ display: 'block', width: '100%', marginBottom: '8px', color: 'black', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+          style={{
+            display: 'block',
+            width: '100%',
+            marginBottom: '8px',
+            color: 'black',
+            padding: '8px',
+            borderRadius: '4px',
+            border: '1px solid #ccc',
+          }}
         />
         <button onClick={createInvitationCode} style={{ marginRight: '8px' }}>
           Create Invitation

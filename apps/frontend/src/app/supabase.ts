@@ -2,12 +2,12 @@
 // It provides the small subset of the Supabase API that the frontend uses
 // (`supabase.auth.user()`, `supabase.auth.signOut()`, and `supabase.from(...).insert/then`).
 
-import { io, Socket } from "socket.io-client";
+import { io, Socket } from 'socket.io-client';
 import {
   API_URL,
   normalizeBlobUrl,
   unwrapApiPayload,
-} from "./services/api.service";
+} from './services/api.service';
 
 type StoredUser = {
   id?: string;
@@ -32,15 +32,15 @@ let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
 function getStoredToken(): string | null {
   try {
-    const accessToken = localStorage.getItem("access_token");
+    const accessToken = localStorage.getItem('access_token');
     if (accessToken) {
       return accessToken;
     }
 
-    const legacyToken = localStorage.getItem("token");
+    const legacyToken = localStorage.getItem('token');
     if (legacyToken) {
-      localStorage.setItem("access_token", legacyToken);
-      localStorage.removeItem("token");
+      localStorage.setItem('access_token', legacyToken);
+      localStorage.removeItem('token');
       return legacyToken;
     }
 
@@ -52,7 +52,7 @@ function getStoredToken(): string | null {
 
 function getStoredUser(): StoredUser | null {
   try {
-    const value = localStorage.getItem("user");
+    const value = localStorage.getItem('user');
     return value ? (JSON.parse(value) as StoredUser) : null;
   } catch {
     return null;
@@ -72,17 +72,17 @@ function buildDisplayUser(userId?: string | null): StoredUser | null {
   return {
     id: userId,
     name: `User ${userId.slice(0, 8)}`,
-    email: "",
+    email: '',
     avatar: null,
   };
 }
 
 function getChannelIdFromTable(table: string, filters: Map<string, any>) {
-  if (filters.has("channel_id")) {
-    return String(filters.get("channel_id"));
+  if (filters.has('channel_id')) {
+    return String(filters.get('channel_id'));
   }
 
-  if (table.startsWith("messages:")) {
+  if (table.startsWith('messages:')) {
     const match = table.match(/channel_id=eq\.([a-f0-9-]+)/i);
     if (match?.[1]) {
       return match[1];
@@ -99,7 +99,7 @@ function startHeartbeat(socket: Socket) {
 
   heartbeatInterval = setInterval(() => {
     if (socket.connected) {
-      socket.emit("presence:heartbeat");
+      socket.emit('presence:heartbeat');
     }
   }, 30000); // 30 seconds
 }
@@ -138,22 +138,22 @@ export function getChatSocket() {
 
   chatSocket = io(`${API_URL}/chat`, {
     autoConnect: true,
-    transports: ["websocket"],
+    transports: ['websocket'],
     withCredentials: true,
     auth: { token: accessToken },
   });
 
-  chatSocket.on("connect", () => {
-    console.log("[Socket] Connected to /chat namespace");
+  chatSocket.on('connect', () => {
+    console.log('[Socket] Connected to /chat namespace');
   });
 
-  chatSocket.on("disconnect", (reason) => {
-    console.warn("[Socket] Disconnected from /chat namespace:", reason);
+  chatSocket.on('disconnect', (reason) => {
+    console.warn('[Socket] Disconnected from /chat namespace:', reason);
     // DO NOT set chatSocket = null here. We want to keep the instance for auto-reconnect.
   });
 
-  chatSocket.on("connect_error", (error) => {
-    console.error("[Socket] Connection error on /chat namespace:", error);
+  chatSocket.on('connect_error', (error) => {
+    console.error('[Socket] Connection error on /chat namespace:', error);
   });
 
   startHeartbeat(chatSocket);
@@ -183,7 +183,7 @@ export function getNotificationsSocket() {
 
   notificationsSocket = io(`${API_URL}/notifications`, {
     autoConnect: true,
-    transports: ["websocket"],
+    transports: ['websocket'],
     withCredentials: true,
     auth: { token: accessToken },
   });
@@ -193,7 +193,7 @@ export function getNotificationsSocket() {
 
 function buildHeaders(extraHeaders: Record<string, string> = {}) {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
     ...extraHeaders,
   };
 
@@ -211,7 +211,7 @@ async function handleJsonResponse(res: Response) {
 
   if (!res.ok) {
     const message =
-      payload?.message || payload?.error || res.statusText || "Request failed";
+      payload?.message || payload?.error || res.statusText || 'Request failed';
     throw new Error(message);
   }
 
@@ -219,7 +219,7 @@ async function handleJsonResponse(res: Response) {
 }
 
 function normalizeDate(value: unknown): string {
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     return value;
   }
 
@@ -237,7 +237,7 @@ function normalizeMessage(record: Record<string, any>) {
   return {
     id: record.id,
     channel_id: record.channel_id ?? record.channelId,
-    text: record.text ?? record.content ?? "",
+    text: record.text ?? record.content ?? '',
     sent_by: sentBy,
     app_users: displayUser,
     created_at: normalizeDate(record.created_at ?? record.createdAt),
@@ -271,7 +271,7 @@ function extractCollection(payload: any): Array<Record<string, any>> {
 class QueryBuilder {
   private table: string;
   private filters: Map<string, any> = new Map();
-  private selectFields: string = "*";
+  private selectFields: string = '*';
   private isSingle = false;
   private insertValues: InsertRow[] | null = null;
   private limitValue: number | null = null;
@@ -284,7 +284,7 @@ class QueryBuilder {
     this.table = table;
   }
 
-  select(fields: string = "*") {
+  select(fields: string = '*') {
     this.selectFields = fields;
     return this;
   }
@@ -345,13 +345,13 @@ class QueryBuilder {
 
     const channel = await this.fetchChannel(channelId);
     if (channel?.serverId) {
-      socket.emit("server:join", channel.serverId);
-      socket.emit("channel:join", {
+      socket.emit('server:join', channel.serverId);
+      socket.emit('channel:join', {
         serverId: channel.serverId,
         channelId,
       });
     } else {
-      socket.emit("dm:join", { channelId });
+      socket.emit('dm:join', { channelId });
     }
 
     const emitInsert = (payload: Record<string, any>) => {
@@ -360,7 +360,7 @@ class QueryBuilder {
       }
 
       this.realtimeHandler?.({
-        eventType: "INSERT",
+        eventType: 'INSERT',
         new: normalizeRealtimeMessage(payload),
         old: null,
       });
@@ -372,7 +372,7 @@ class QueryBuilder {
       }
 
       this.realtimeHandler?.({
-        eventType: "UPDATE",
+        eventType: 'UPDATE',
         new: normalizeRealtimeMessage(payload),
         old: null,
       });
@@ -384,21 +384,21 @@ class QueryBuilder {
       }
 
       this.realtimeHandler?.({
-        eventType: "DELETE",
+        eventType: 'DELETE',
         old: normalizeRealtimeMessage(payload),
         new: null,
       });
     };
 
-    socket.off("message:created", emitInsert);
-    socket.off("message:updated", emitUpdate);
-    socket.off("message:deleted", emitDelete);
-    socket.off("message:deletedForEveryone", emitDelete);
+    socket.off('message:created', emitInsert);
+    socket.off('message:updated', emitUpdate);
+    socket.off('message:deleted', emitDelete);
+    socket.off('message:deletedForEveryone', emitDelete);
 
-    socket.on("message:created", emitInsert);
-    socket.on("message:updated", emitUpdate);
-    socket.on("message:deleted", emitDelete);
-    socket.on("message:deletedForEveryone", emitDelete);
+    socket.on('message:created', emitInsert);
+    socket.on('message:updated', emitUpdate);
+    socket.on('message:deleted', emitDelete);
+    socket.on('message:deletedForEveryone', emitDelete);
 
     this.realtimeSubscribed = true;
   }
@@ -407,7 +407,7 @@ class QueryBuilder {
     try {
       const res = await fetch(`${API_URL}/channels/${channelId}`, {
         headers: buildHeaders(),
-        credentials: "include",
+        credentials: 'include',
       });
 
       if (!res.ok) {
@@ -423,30 +423,30 @@ class QueryBuilder {
   private buildUrl(): string {
     let url = `${API_URL}/${this.table}`;
 
-    if (this.table.includes("messages")) {
-      if (this.filters.has("channel_id")) {
-        const channelId = this.filters.get("channel_id");
+    if (this.table.includes('messages')) {
+      if (this.filters.has('channel_id')) {
+        const channelId = this.filters.get('channel_id');
         url = `${API_URL}/messages/channel/${channelId}`;
-        this.filters.delete("channel_id");
-      } else if (this.table.startsWith("messages:")) {
+        this.filters.delete('channel_id');
+      } else if (this.table.startsWith('messages:')) {
         const match = this.table.match(/channel_id=eq\.([a-f0-9-]+)/);
         if (match && match[1]) {
           url = `${API_URL}/messages/channel/${match[1]}`;
         }
       }
-    } else if (this.table === "channels" && this.filters.has("id")) {
-      const id = this.filters.get("id");
+    } else if (this.table === 'channels' && this.filters.has('id')) {
+      const id = this.filters.get('id');
       url = `${API_URL}/channels/${id}`;
-      this.filters.delete("id");
+      this.filters.delete('id');
     }
 
     if (this.limitValue !== null) {
-      this.filters.set("limit", String(this.limitValue));
+      this.filters.set('limit', String(this.limitValue));
     }
 
     if (this.orderField) {
-      this.filters.set("order", this.orderField);
-      this.filters.set("ascending", String(this.orderAscending));
+      this.filters.set('order', this.orderField);
+      this.filters.set('ascending', String(this.orderAscending));
     }
 
     const params = new URLSearchParams();
@@ -454,7 +454,7 @@ class QueryBuilder {
       params.append(key, value);
     }
 
-    const queryStr = params.toString() ? `?${params}` : "";
+    const queryStr = params.toString() ? `?${params}` : '';
     return url + queryStr;
   }
 
@@ -469,7 +469,7 @@ class QueryBuilder {
 
     const payload = {
       channelId: row.channel_id ?? row.channelId,
-      content: row.content ?? row.text ?? row.message ?? "",
+      content: row.content ?? row.text ?? row.message ?? '',
       parentMessageId: row.parentMessageId ?? row.parent_message_id,
       threadRootMessageId:
         row.threadRootMessageId ?? row.thread_root_message_id,
@@ -479,11 +479,11 @@ class QueryBuilder {
 
     try {
       const res = await fetch(url, {
-        method: "POST",
+        method: 'POST',
         headers: buildHeaders(
-          guestUserId ? { "x-guest-user-id": String(guestUserId) } : {},
+          guestUserId ? { 'x-guest-user-id': String(guestUserId) } : {},
         ),
-        credentials: "include",
+        credentials: 'include',
         body: JSON.stringify(payload),
       });
 
@@ -503,8 +503,8 @@ class QueryBuilder {
       return this.performInsert(callback);
     }
 
-    if (this.table === "app_users" && this.filters.has("id")) {
-      const id = this.filters.get("id");
+    if (this.table === 'app_users' && this.filters.has('id')) {
+      const id = this.filters.get('id');
       const user = buildDisplayUser(id);
       return callback({ data: user, error: null });
     }
@@ -514,13 +514,13 @@ class QueryBuilder {
     try {
       const res = await fetch(url, {
         headers: buildHeaders(),
-        credentials: "include",
+        credentials: 'include',
       });
 
       const data = await handleJsonResponse(res);
       const collection = extractCollection(data);
 
-      if (url.includes("/messages/channel/")) {
+      if (url.includes('/messages/channel/')) {
         const normalized = collection.map((item) => normalizeMessage(item));
 
         if (this.isSingle) {
@@ -530,7 +530,7 @@ class QueryBuilder {
         return callback({ data: normalized, error: null });
       }
 
-      if (url.includes("/channels/")) {
+      if (url.includes('/channels/')) {
         if (this.isSingle) {
           return callback({ data, error: null });
         }
@@ -557,7 +557,7 @@ export const supabase = {
     // should store `user` and `access_token` in localStorage when implemented.
     user(): any | null {
       try {
-        const u = localStorage.getItem("user");
+        const u = localStorage.getItem('user');
         return u ? JSON.parse(u) : null;
       } catch (e) {
         return null;
@@ -567,23 +567,23 @@ export const supabase = {
     async signOut() {
       try {
         await fetch(`${API_URL}/auth/logout`, {
-          method: "POST",
+          method: 'POST',
           headers: buildHeaders(),
-          credentials: "include",
+          credentials: 'include',
         });
       } catch (e) {
         // ignore network errors on sign out
       }
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
     },
 
     async refresh() {
       try {
         const response = await fetch(`${API_URL}/auth/refresh`, {
-          method: "POST",
-          credentials: "include",
+          method: 'POST',
+          credentials: 'include',
         });
 
         if (!response.ok) {
@@ -595,8 +595,8 @@ export const supabase = {
         );
 
         if (data?.access_token) {
-          localStorage.setItem("access_token", data.access_token);
-          localStorage.removeItem("token");
+          localStorage.setItem('access_token', data.access_token);
+          localStorage.removeItem('token');
         }
 
         return data;

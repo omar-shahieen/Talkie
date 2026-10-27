@@ -90,7 +90,7 @@ export default function AppChatContainer({
   async function toggleReaction(messageId: string, emoji: string) {
     if (!currentUser?.id) return;
     const currentUserId = currentUser.id;
-    
+
     const currentMessage = messages.find((message) => message.id === messageId);
     const hasReaction = (currentMessage?.reactions ?? []).some(
       (reaction) =>
@@ -320,8 +320,7 @@ export default function AppChatContainer({
           const nextReactionId = `${payload.messageId}:${userId}:${payload.emoji}`;
           const hasExisting = (item.reactions ?? []).some(
             (reaction) =>
-              reaction.emoji === payload.emoji &&
-              reaction.userId === userId,
+              reaction.emoji === payload.emoji && reaction.userId === userId,
           );
 
           if (hasExisting) {
@@ -620,7 +619,8 @@ function AppMessageContainer({
         [reaction.emoji]: {
           emoji: reaction.emoji,
           count: existing.count + 1,
-          reactedByMe: existing.reactedByMe || reaction.userId === currentUserId,
+          reactedByMe:
+            existing.reactedByMe || reaction.userId === currentUserId,
         },
       };
     },

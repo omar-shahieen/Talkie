@@ -1,6 +1,6 @@
 import { Avatar, Box, Divider, Text, VStack } from '@chakra-ui/react';
 import React, { useEffect, useState } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AddIcon } from '@chakra-ui/icons';
 import {
   discoverPublicServers,
@@ -14,7 +14,7 @@ import { useThemedColors } from '../theme/colors';
 export default function AppMainSidebar() {
   const colors = useThemedColors();
   const user = useAuth();
-  const history = useHistory();
+  const navigate = useNavigate();
   const [servers, setServers] = useState<any[]>([]);
   const logoSrc = '/talkie-logo.png';
 
@@ -26,7 +26,9 @@ export default function AppMainSidebar() {
         if (user?.id) {
           const mine = await fetchMyServers(user.id);
           const list =
-            Array.isArray(mine) && mine.length > 0 ? mine : await fetchServers();
+            Array.isArray(mine) && mine.length > 0
+              ? mine
+              : await fetchServers();
           if (isMounted) {
             setServers(Array.isArray(list) ? list : []);
           }
@@ -72,7 +74,12 @@ export default function AppMainSidebar() {
       overflowY="hidden"
     >
       <Avatar height="45px" width="45px" src={logoSrc} name="Talkie" />
-      <Text marginTop="6px" color={colors.white} fontSize="xs" fontWeight="bold">
+      <Text
+        marginTop="6px"
+        color={colors.white}
+        fontSize="xs"
+        fontWeight="bold"
+      >
         Talkie
       </Text>
       <Divider marginY="15px" width="30px" />
@@ -93,7 +100,7 @@ export default function AppMainSidebar() {
         {user?.id && (
           <Box
             cursor="pointer"
-            onClick={() => history.push('/settings')}
+            onClick={() => navigate('/settings')}
             display="flex"
             alignItems="center"
             justifyContent="center"
@@ -101,7 +108,11 @@ export default function AppMainSidebar() {
             height="45px"
             borderRadius="50%"
             backgroundColor={colors.grayDark}
-            _hover={{ backgroundColor: 'green.500', color: 'white', borderRadius: '30%' }}
+            _hover={{
+              backgroundColor: 'green.500',
+              color: 'white',
+              borderRadius: '30%',
+            }}
             color={colors.primary}
             transition="all 0.2s"
             title="Create a Server"
