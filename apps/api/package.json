@@ -28,7 +28,14 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
     "typecheck": "tsc --noEmit",
-    "seed": "ts-node -r tsconfig-paths/register src/common/database/seed.ts"
+    "seed": "ts-node -r tsconfig-paths/register src/common/database/seed.ts",
+    "migration:generate": "typeorm-ts-node-commonjs -d src/common/database/data-source.ts migration:generate",
+    "migration:create": "typeorm-ts-node-commonjs migration:create",
+    "migration:run": "ts-node -r tsconfig-paths/register src/common/database/migrate.ts up",
+    "migration:revert": "ts-node -r tsconfig-paths/register src/common/database/migrate.ts down",
+    "migration:status": "ts-node -r tsconfig-paths/register src/common/database/migrate.ts status",
+    "migration:run:prod": "node dist/common/database/migrate.js up",
+    "migration:revert:prod": "node dist/common/database/migrate.js down"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1156.0",

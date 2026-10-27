@@ -5,14 +5,18 @@ import { CacheInterceptor } from '@nestjs/cache-manager';
 export class HttpCacheInterceptor extends CacheInterceptor {
   trackBy(context: ExecutionContext): string | undefined {
     const http = context.switchToHttp();
-    const req = http.getRequest();
+    const req = http.getRequest<{ url?: string; user?: { id?: string } }>();
 
     if (!this.isRequestCacheable(context)) {
       return undefined;
     }
 
-    // Do not cache personal user profile
-    if (req?.url?.includes('/users/me')) {
+    // Do not cache personal user profile or health/metrics probes
+    if (
+      req?.url?.includes('/users/me') ||
+      req?.url?.startsWith('/health') ||
+      req?.url?.startsWith('/metrics')
+    ) {
       return undefined;
     }
 

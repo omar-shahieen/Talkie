@@ -1,7 +1,5 @@
 import 'reflect-metadata';
 
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { faker } from '@faker-js/faker';
 import { DataSource } from 'typeorm';
 
@@ -20,42 +18,9 @@ import { Server } from '../../servers/entities/server.entity';
 import { ServerMember } from '../../servers/entities/server-member.entity';
 import { UserSubscriber } from '../../users/user.subscriber';
 import { User } from '../../users/entities/user.entity';
+import { loadEnvFiles } from './data-source';
 
-const loadEnvFile = (filePath: string): void => {
-  if (!existsSync(filePath)) {
-    return;
-  }
-
-  const contents = readFileSync(filePath, 'utf8');
-  for (const line of contents.split(/\r?\n/)) {
-    const trimmed = line.trim();
-
-    if (!trimmed || trimmed.startsWith('#')) {
-      continue;
-    }
-
-    const equalsIndex = trimmed.indexOf('=');
-    if (equalsIndex === -1) {
-      continue;
-    }
-
-    const key = trimmed.slice(0, equalsIndex).trim();
-    const rawValue = trimmed.slice(equalsIndex + 1).trim();
-    const value = rawValue.replace(/^['\\"]|['\\"]$/g, '');
-
-    if (!process.env[key]) {
-      process.env[key] = value;
-    }
-  }
-};
-
-for (const candidate of [
-  resolve(process.cwd(), '.env'),
-  resolve(process.cwd(), 'apps/api/.env'),
-  resolve(process.cwd(), '../../.env'),
-]) {
-  loadEnvFile(candidate);
-}
+loadEnvFiles();
 
 if (
   process.env.NODE_ENV === 'production' &&

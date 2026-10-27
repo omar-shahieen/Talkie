@@ -26,7 +26,12 @@
     "format": "nx run-many -t format",
     "format:check": "nx run-many -t format:check",
     "typecheck": "nx run-many -t typecheck",
-    "seed": "nx run @talkie/api:seed"
+    "seed": "nx run @talkie/api:seed",
+    "migration:generate": "npm --workspace=@talkie/api run migration:generate --",
+    "migration:create": "npm --workspace=@talkie/api run migration:create --",
+    "migration:run": "nx run @talkie/api:migration:run",
+    "migration:revert": "nx run @talkie/api:migration:revert",
+    "migration:status": "nx run @talkie/api:migration:status"
   },
   "devDependencies": {
     "nx": "24.0.2"

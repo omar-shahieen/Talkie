@@ -88,6 +88,9 @@ function getRedisUrl(config: ConfigService): string {
         autoLoadEntities: true,
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         subscribers: [__dirname + '/**/*.subscriber{.ts,.js}'],
+        migrations: [__dirname + '/migrations/*{.ts,.js}'],
+        migrationsTableName: 'typeorm_migrations',
+        migrationsRun: config.get<string>('DB_MIGRATIONS_RUN') === 'true',
         synchronize:
           (config.get<string>('DB_SYNC') ??
             (config.get<string>('NODE_ENV') === 'production'

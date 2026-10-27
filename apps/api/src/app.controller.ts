@@ -5,7 +5,7 @@ import {
   Post,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { AppService } from './app.service';
+import { AppService, HealthCheckResult } from './app.service';
 import { Public } from './auth/decorators/public.decorator';
 
 @Controller()
@@ -27,12 +27,19 @@ export class AppController implements OnModuleDestroy {
 
   @Get('health')
   @Public()
-  health(): { status: string } {
+  async health(): Promise<HealthCheckResult> {
     // Readiness: report 503 while draining so load balancers stop routing here.
     if (this.shuttingDown) {
-      throw new ServiceUnavailableException('shutting_down');
+      throw new ServiceUnavailableException({
+        status: 'shutting_down',
+        checks: { postgres: 'down', redis: 'down' },
+      });
     }
-    return { status: 'ok' };
+    const report = await this.appService.checkHealth();
+    if (report.status !== 'ok') {
+      throw new ServiceUnavailableException(report);
+    }
+    return report;
   }
 
   @Get('test-slow')
