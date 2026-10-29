@@ -74,5 +74,6 @@
       "!{projectRoot}/jest.config.[jt]s"
     ]
   },
-  "analytics": false
+  "analytics": false,
+  "nxCloudId": "6ae3742805cfef32636d7ef4"
 }
