@@ -65,7 +65,7 @@ export async function registerAndLogin(
   const rawPassword = 'Password123!';
 
   // 1. Sign up
-  const signupRes = await request(app.getHttpServer())
+  await request(app.getHttpServer())
     .post('/auth/signup')
     .send({
       firstName: 'Test',

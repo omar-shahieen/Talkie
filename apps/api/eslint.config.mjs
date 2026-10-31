@@ -33,4 +33,15 @@ export default tseslint.config(
       '@typescript-eslint/restrict-template-expressions': 'error',
     },
   },
+  {
+    files: ['test/**/*.ts', 'src/**/*.spec.ts', 'src/**/*.test.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/unbound-method': 'off',
+    },
+  },
 );

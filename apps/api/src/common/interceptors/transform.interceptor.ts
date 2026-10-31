@@ -21,43 +21,36 @@ export class TransformInterceptor implements NestInterceptor {
     const isDev = this.configService.get('NODE_ENV') === 'development';
 
     return next.handle().pipe(
-      map(
-        (
-          data:
-            | {
-                message?: string;
-                results?: Record<string, any>;
-                ms?: number;
-              }
-            | unknown,
-        ): SuccessResponseDto => {
-          const isRecord =
-            data !== null && typeof data === 'object' && !Array.isArray(data);
-          const dataRecord = isRecord ? (data as Record<string, any>) : {};
-          const { message, ms, ...rest } = dataRecord;
-          const results = isRecord ? rest : (data ?? null);
+      map((data: unknown): SuccessResponseDto => {
+        const isRecord =
+          data !== null && typeof data === 'object' && !Array.isArray(data);
+        const dataRecord = isRecord ? (data as Record<string, unknown>) : {};
+        const { message, ms, ...rest } = dataRecord;
+        const results = isRecord ? rest : (data ?? null);
 
-          const response: SuccessResponseDto = {
-            success: true,
-            message: message || 'Operation completed successfully',
-            results: results,
-            timestamp: new Date().toISOString(),
+        const response: SuccessResponseDto = {
+          success: true,
+          message:
+            typeof message === 'string'
+              ? message
+              : 'Operation completed successfully',
+          results: results,
+          timestamp: new Date().toISOString(),
+        };
+
+        // Only include sensitive metadata in development mode
+        if (isDev) {
+          return {
+            ...response,
+            ms: typeof ms === 'number' ? ms : undefined,
+            correlationId: this.cls.get<string>('correlationId'),
+            ip: this.cls.get<string>('ip') ?? 'anonymous',
+            userId: this.cls.get<string>('userId') ?? 'anonymous',
           };
+        }
 
-          // Only include sensitive metadata in development mode
-          if (isDev) {
-            return {
-              ...response,
-              ms,
-              correlationId: this.cls.get<string>('correlationId'),
-              ip: this.cls.get<string>('ip') ?? 'anonymous',
-              userId: this.cls.get<string>('userId') ?? 'anonymous',
-            };
-          }
-
-          return response;
-        },
-      ),
+        return response;
+      }),
     );
   }
 }

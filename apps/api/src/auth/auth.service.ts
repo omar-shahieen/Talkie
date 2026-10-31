@@ -671,7 +671,7 @@ export class AuthService {
   }
 
   async logout(userId: string): Promise<void> {
-    await this.usersRepository.update(userId, { currentJwtToken: null as any });
+    await this.usersRepository.update(userId, { currentJwtToken: null });
     this.logger.log(`User logged out userId=${userId}`, {
       context: AuthService.name,
       action: 'logout',

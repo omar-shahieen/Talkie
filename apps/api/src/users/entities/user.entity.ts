@@ -39,7 +39,7 @@ export class User {
   googleId?: string;
 
   @Column({ nullable: true, select: false, unique: true })
-  currentJwtToken?: string;
+  currentJwtToken?: string | null;
 
   @Column({ default: false })
   isTfaEnabled!: boolean;
