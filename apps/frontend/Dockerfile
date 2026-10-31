@@ -9,6 +9,7 @@ WORKDIR /usr/src/app
 # Root workspace manifests + lockfile (all workspace package.json files are needed to validate the lock)
 COPY package.json package-lock.json ./
 COPY apps/frontend/package.json ./apps/frontend/
+COPY apps/api/package.json ./apps/api/
 
 RUN npm ci --workspace=@talkie/frontend
 

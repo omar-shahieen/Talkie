@@ -21,9 +21,7 @@ function IndexView() {
       try {
         const messages = await fetchMessages(channelId);
         const latestMessageId =
-          messages.length > 0
-            ? messages[messages.length - 1].id
-            : null;
+          messages.length > 0 ? messages[messages.length - 1].id : null;
 
         if (!isMounted || !latestMessageId) {
           return;
